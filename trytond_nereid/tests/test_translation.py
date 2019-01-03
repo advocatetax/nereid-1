@@ -2,7 +2,8 @@
 # this repository contains the full copyright notices and license terms.
 import unittest
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, with_transaction
+from trytond.tests.test_tryton import activate_module, with_transaction
+from trytond.pool import Pool
 from nereid.testing import NereidTestCase
 
 
@@ -12,15 +13,15 @@ class TestTranslation(NereidTestCase):
     def setUp(self):
         # Install the test module which has bundled translations which can
         # be used for this test
-        trytond.tests.test_tryton.install_module('nereid_test')
+        activate_module('nereid_test')
 
     @with_transaction()
     def test_0010_nereid_template_extraction(self):
         """
         Test translation extaction from nereid templates
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -44,8 +45,8 @@ class TestTranslation(NereidTestCase):
         """
         Ensure that templates are extracted from the code
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -69,8 +70,8 @@ class TestTranslation(NereidTestCase):
         """
         Ensure that the builtin messages from wtforms are also extracted
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -94,8 +95,8 @@ class TestTranslation(NereidTestCase):
         """
         Test for gettext without comment using _
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -117,8 +118,8 @@ class TestTranslation(NereidTestCase):
         """
         Test for gettext with comment before it
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -139,8 +140,8 @@ class TestTranslation(NereidTestCase):
         """
         Test for gettext with comment inline
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -161,8 +162,8 @@ class TestTranslation(NereidTestCase):
         """
         Test for gettext using gettext instead of _
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -183,8 +184,8 @@ class TestTranslation(NereidTestCase):
         """
         Test for ngettext
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -213,8 +214,8 @@ class TestTranslation(NereidTestCase):
         Test for {% trans %}Hola {{ user }}!{% endtrans %} tag
 
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -239,8 +240,8 @@ class TestTranslation(NereidTestCase):
         Test for
         {% trans user=user.username %}Hello {{ user }}!{% endtrans %} tag
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -271,8 +272,8 @@ class TestTranslation(NereidTestCase):
         {% endtrans %}
 
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -306,10 +307,10 @@ class TestTranslation(NereidTestCase):
         """
         Check if the cleaning of translations work
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        TranslationClean = POOL.get('ir.translation.clean', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
-        IRModule = POOL.get('ir.module')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        TranslationClean = Pool().get('ir.translation.clean', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
+        IRModule = Pool().get('ir.module')
 
         # First create all the translations
         session_id, _, _ = TranslationSet.create()
@@ -320,7 +321,7 @@ class TestTranslation(NereidTestCase):
         # belonging to that module with type as nereid or
         # nereid_template
         nereid_test, = IRModule.search([('name', '=', 'nereid_test')])
-        nereid_test.state = 'uninstalled'
+        nereid_test.state = 'not activated'
         nereid_test.save()
 
         session_id, _, _ = TranslationClean.create()
@@ -338,10 +339,10 @@ class TestTranslation(NereidTestCase):
         """
         Check if the update does not break this functionality
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        TranslationUpdate = POOL.get('ir.translation.update', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
-        IRLanguage = POOL.get('ir.lang')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        TranslationUpdate = Pool().get('ir.translation.update', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
+        IRLanguage = Pool().get('ir.lang')
 
         # First create all the translations
         session_id, _, _ = TranslationSet.create()
@@ -373,10 +374,10 @@ class TestTranslation(NereidTestCase):
         """
         Export the translations and test
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
-        TranslationUpdate = POOL.get('ir.translation.update', type='wizard')
-        IRTranslation = POOL.get('ir.translation')
-        IRLanguage = POOL.get('ir.lang')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
+        TranslationUpdate = Pool().get('ir.translation.update', type='wizard')
+        IRTranslation = Pool().get('ir.translation')
+        IRLanguage = Pool().get('ir.lang')
 
         # First create all the translations
         session_id, _, _ = TranslationSet.create()

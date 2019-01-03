@@ -4,7 +4,8 @@ import unittest
 from decimal import Decimal
 
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, USER, with_transaction
+from trytond.tests.test_tryton import activate_module, USER, with_transaction
+from trytond.pool import Pool
 from trytond.transaction import Transaction
 from nereid.testing import NereidTestCase
 from nereid.exceptions import WebsiteNotFound
@@ -14,17 +15,7 @@ class TestRouting(NereidTestCase):
     'Test URL Routing'
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid_test')
-
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.locale_obj = POOL.get('nereid.website.locale')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.language_obj = POOL.get('ir.lang')
-        self.currency_obj = POOL.get('currency.currency')
-        self.country_obj = POOL.get('country.country')
-        self.subdivision_obj = POOL.get('country.subdivision')
-        self.party_obj = POOL.get('party.party')
+        activate_module('nereid_test')
 
         self.templates = {
             'home.jinja': '{{ Transaction().language }}',
@@ -34,6 +25,16 @@ class TestRouting(NereidTestCase):
         """
         Setup the defaults
         """
+        self.nereid_website_obj = Pool().get('nereid.website')
+        self.locale_obj = Pool().get('nereid.website.locale')
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.language_obj = Pool().get('ir.lang')
+        self.currency_obj = Pool().get('currency.currency')
+        self.country_obj = Pool().get('country.country')
+        self.subdivision_obj = Pool().get('country.subdivision')
+        self.party_obj = Pool().get('party.party')
+
         self.usd, self.eur = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -62,8 +63,8 @@ class TestRouting(NereidTestCase):
             'company': self.company,
         }])
 
-        self.en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        self.es_es, = self.language_obj.search([('code', '=', 'es_ES')])
+        self.en_us, = self.language_obj.search([('code', '=', 'en')])
+        self.es_es, = self.language_obj.search([('code', '=', 'es')])
         self.locale_en_us, self.locale_es_es = self.locale_obj.create([{
             'code': 'en_US',
             'language': self.en_us,
@@ -144,7 +145,7 @@ class TestRouting(NereidTestCase):
         with app.test_client() as c:
             response = c.get('/')
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, 'en_US')
+            self.assertEqual(response.data, b'en')
 
     @with_transaction()
     def test_0030_lang_context_with_locale(self):
@@ -156,11 +157,11 @@ class TestRouting(NereidTestCase):
 
         with app.test_client() as c:
             response = c.get('/en_US/')
-            self.assertEqual(response.data, 'en_US')
+            self.assertEqual(response.data, b'en')
 
         with app.test_client() as c:
             response = c.get('/es_ES/')
-            self.assertEqual(response.data, 'es_ES')
+            self.assertEqual(response.data, b'es')
 
     @with_transaction()
     def test_0040_lang_context_without_locale(self):
@@ -174,7 +175,7 @@ class TestRouting(NereidTestCase):
 
         with app.test_client() as c:
             response = c.get('/')
-            self.assertEqual(response.data, 'en_US')
+            self.assertEqual(response.data, b'en')
 
         # Change the default locale to es_ES and then check
         self.nereid_website.default_locale = self.locale_es_es
@@ -182,7 +183,7 @@ class TestRouting(NereidTestCase):
 
         with app.test_client() as c:
             response = c.get('/')
-            self.assertEqual(response.data, 'es_ES')
+            self.assertEqual(response.data, b'es')
 
     @with_transaction()
     def test_0050_website_routing(self):
@@ -196,10 +197,10 @@ class TestRouting(NereidTestCase):
 
         with app.test_client() as c:
             response = c.get('http://localhost/')
-            self.assertEqual(response.data, 'en_US')
+            self.assertEqual(response.data, b'en')
 
             response = c.get('http://this_should_work_too/')
-            self.assertEqual(response.data, 'en_US')
+            self.assertEqual(response.data, b'en')
 
             self.nereid_website_obj.create([{
                 'name': 'another_website',
@@ -259,7 +260,7 @@ class TestRouting(NereidTestCase):
                 'csrf_token': csrf_token,
             })
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, 'Failure')
+            self.assertEqual(response.data, b'Failure')
 
             # csrf token with valid form
             csrf_token = c.get('/gen-csrf').data
@@ -268,7 +269,7 @@ class TestRouting(NereidTestCase):
                 'csrf_token': csrf_token,
             })
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, 'Success')
+            self.assertEqual(response.data, b'Success')
 
     @with_transaction()
     def test_0070_csrf_exempt(self):
@@ -288,14 +289,14 @@ class TestRouting(NereidTestCase):
                 'name': '',
             })
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, 'Failure')
+            self.assertEqual(response.data, b'Failure')
 
             # valid form
             response = c.post('/test-csrf-exempt', data={
                 'name': 'dummy name',
             })
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, 'Success')
+            self.assertEqual(response.data, b'Success')
 
 
 def suite():

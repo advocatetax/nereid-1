@@ -45,8 +45,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Nereid'
-copyright = u'2012-2015, Openlabs Technologies & Consulting (P) Limited'
+project = 'Nereid'
+copyright = '2012-2015, Openlabs Technologies & Consulting (P) Limited'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -57,10 +57,10 @@ import pkg_resources
 try:
     release = pkg_resources.get_distribution('trytond_nereid').version
 except pkg_resources.DistributionNotFound:
-    print 'To build the documentation, The distribution information of Nereid'
-    print 'Has to be available.  Either install the package into your'
-    print 'development environment or run "setup.py develop" to setup the'
-    print 'metadata.  A virtualenv is recommended!'
+    print('To build the documentation, The distribution information of Nereid')
+    print('Has to be available.  Either install the package into your')
+    print('development environment or run "setup.py develop" to setup the')
+    print('metadata.  A virtualenv is recommended!')
     sys.exit(1)
 del pkg_resources
 
@@ -200,8 +200,8 @@ latex_elements = {  # noqa
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass[howto/manual]).
 latex_documents = [
-    ('index', 'Nereid.tex', u'Nereid Documentation',
-        u'Openlabs Technologies \\& Consulting (P) Limited', 'manual'),
+    ('index', 'Nereid.tex', 'Nereid Documentation',
+        'Openlabs Technologies \\& Consulting (P) Limited', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -230,8 +230,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'nereid', u'Nereid Documentation',
-     [u'Openlabs Technologies & Consulting (P) Limited'], 1)
+    ('index', 'nereid', 'Nereid Documentation',
+     ['Openlabs Technologies & Consulting (P) Limited'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -244,8 +244,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ('index', 'Nereid', u'Nereid Documentation',
-        u'Openlabs Technologies & Consulting (P) Limited', 'Nereid',
+    ('index', 'Nereid', 'Nereid Documentation',
+        'Openlabs Technologies & Consulting (P) Limited', 'Nereid',
         'One line description of project.', 'Miscellaneous'),
 ]
 
@@ -262,10 +262,10 @@ texinfo_documents = [
 # -- Options for Epub output -------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'Nereid'
-epub_author = u'Openlabs Technologies & Consulting (P) Limited'
-epub_publisher = u'Openlabs Technologies & Consulting (P) Limited'
-epub_copyright = u'2012-2015, Openlabs Technologies & Consulting (P) Limited'
+epub_title = 'Nereid'
+epub_author = 'Openlabs Technologies & Consulting (P) Limited'
+epub_publisher = 'Openlabs Technologies & Consulting (P) Limited'
+epub_copyright = '2012-2015, Openlabs Technologies & Consulting (P) Limited'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

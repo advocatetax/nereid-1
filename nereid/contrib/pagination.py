@@ -63,7 +63,7 @@ class BasePagination(object):
         return self.data[self.offset:self.offset + self.per_page]
 
     def __iter__(self):
-        for item in self.items():
+        for item in list(self.items()):
             yield item
 
     def __len__(self):
@@ -75,7 +75,7 @@ class BasePagination(object):
             "pages": self.pages,
             "page": self.page,
             "per_page": self.per_page,
-            "items": self.items(),
+            "items": list(self.items()),
         }
 
     @property
@@ -83,7 +83,7 @@ class BasePagination(object):
         """Returns a :class:`Pagination` object for the previous page."""
         return Pagination(self.page - 1, self.per_page, self.data)
 
-    def next(self):
+    def __next__(self):
         """Returns a :class:`Pagination` object for the next page."""
         return Pagination(self.page + 1, self.per_page, self.data)
 
@@ -119,7 +119,7 @@ class BasePagination(object):
             {% endmacro %}
         """
         last = 0
-        for num in xrange(1, self.pages + 1):
+        for num in range(1, self.pages + 1):
             if num <= left_edge or \
                 (num > self.page - left_current - 1 and
                     num < self.page + right_current) or \
@@ -205,16 +205,16 @@ class Pagination(BasePagination):
     def serialize(self, purpose=None):
         rv = super(Pagination, self).serialize()
         if hasattr(self.obj, 'serialize'):
-            rv['items'] = [item.serialize(purpose) for item in self.items()]
+            rv['items'] = [item.serialize(purpose) for item in list(self.items())]
         elif hasattr(self.obj, '_json'):
             # older style _json methods
-            rv['items'] = [item._json() for item in self.items()]
+            rv['items'] = [item._json() for item in list(self.items())]
         else:
             rv['items'] = [
                 {
                     'id': item.id,
                     'rec_name': item.rec_name,
-                } for item in self.items()
+                } for item in list(self.items())
             ]
         return rv
 
@@ -323,7 +323,7 @@ class QueryPagination(BasePagination):
         cursor.execute(*query)
         rv = [x[0] for x in cursor.fetchall()]
 
-        return self.obj.browse(filter(None, rv))
+        return self.obj.browse([_f for _f in rv if _f])
 
     def items(self):
         """
@@ -346,4 +346,4 @@ class QueryPagination(BasePagination):
         cursor = Transaction().connection.cursor()
         cursor.execute(*query)
         rv = [x[0] for x in cursor.fetchall()]
-        return self.obj.browse(filter(None, rv))
+        return self.obj.browse([_f for _f in rv if _f])

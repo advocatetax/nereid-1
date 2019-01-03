@@ -2,7 +2,7 @@
 # This file is part of Tryton & Nereid. The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
 import os
-import contextlib
+from contextlib import ExitStack
 from decimal import Decimal
 
 from flask.templating import render_template as flask_render_template
@@ -12,9 +12,9 @@ from speaklater import _LazyString
 from jinja2.ext import Extension
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.MIMEBase import MIMEBase
+from email.mime.base import MIMEBase
 from email.header import Header
-from email import Encoders, Charset
+from email import encoders, charset
 import trytond.tools as tools
 from trytond.transaction import Transaction
 
@@ -28,7 +28,7 @@ from .helpers import _rst_to_html_filter, make_crumbs
 # a way that doesn't modify global state. :-(
 #
 # wordeology.com/computer/how-to-send-good-unicode-email-with-python.html
-Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
+charset.add_charset('utf-8', charset.QP, charset.QP, 'utf-8')
 
 
 class LazyRenderer(_LazyString):
@@ -134,7 +134,7 @@ def render_template(template_name_or_list, **context):
                     context of the template.
     """
     if current_app.template_prefix_website_name and \
-            isinstance(template_name_or_list, basestring):
+            isinstance(template_name_or_list, str):
         template_name_or_list = [
             '/'.join([current_website.name, template_name_or_list]),
             template_name_or_list
@@ -197,17 +197,18 @@ class ModuleTemplateLoader(ChoiceLoader):
             self._loaders = []
 
             if not Transaction().connection.cursor():
-                contextmanager = Transaction().start(self.database_name, 0)
+                contextmanager = (Transaction().start(self.database_name, 0),)
             else:
-                contextmanager = contextlib.nested(
+                contextmanager = (
                     Transaction().set_user(0),
                     Transaction().reset_context()
                 )
-            with contextmanager:
+            with ExitStack() as stack:
+                managers = [stack.enter_context(c) for c in contextmanager]
                 cursor = Transaction().connection.cursor()
                 cursor.execute(
                     "SELECT name FROM ir_module "
-                    "WHERE state = 'installed'"
+                    "WHERE state = 'activated'"
                 )
                 installed_module_list = [name for (name,) in cursor.fetchall()]
 
@@ -219,7 +220,9 @@ class ModuleTemplateLoader(ChoiceLoader):
             from trytond.modules import create_graph, get_module_list, \
                 MODULES_PATH, EGG_MODULES
 
-            packages = list(create_graph(get_module_list())[0])[::-1]
+            packages = [
+                package for package in create_graph(get_module_list())
+            ][::-1]
             for package in packages:
                 if package.name not in installed_module_list:
                     # If the module is not installed in the current database
@@ -331,7 +334,7 @@ def render_email(
         if isinstance(text_template, Template):
             text = text_template.render(**context)
         else:
-            text = unicode(render_template(text_template, **context))
+            text = str(render_template(text_template, **context))
         text_part = MIMEText(text.encode("utf-8"), 'plain', _charset="UTF-8")
 
     html_part = None
@@ -339,7 +342,7 @@ def render_email(
         if isinstance(html_template, Template):
             html = html_template.render(**context)
         else:
-            html = unicode(render_template(html_template, **context))
+            html = str(render_template(html_template, **context))
         html_part = MIMEText(html.encode("utf-8"), 'html', _charset="UTF-8")
 
     if text_part and html_part:
@@ -363,10 +366,10 @@ def render_email(
         # Now the message _with_attachments itself becomes the message
         message = message_with_attachments
 
-        for filename, content in attachments.items():
+        for filename, content in list(attachments.items()):
             part = MIMEBase('application', "octet-stream")
             part.set_payload(content)
-            Encoders.encode_base64(part)
+            encoders.encode_base64(part)
             # XXX: Filename might have to be encoded with utf-8,
             # i.e., part's encoding or with email's encoding
             part.add_header(
@@ -379,10 +382,10 @@ def render_email(
 
     # We need to use Header objects here instead of just assigning the strings
     # in order to get our headers properly encoded (with QP).
-    message['Subject'] = Header(unicode(subject), 'ISO-8859-1')
-    message['From'] = Header(unicode(from_email), 'ISO-8859-1')
-    message['To'] = Header(unicode(to), 'ISO-8859-1')
+    message['Subject'] = Header(str(subject), 'ISO-8859-1')
+    message['From'] = Header(str(from_email), 'ISO-8859-1')
+    message['To'] = Header(str(to), 'ISO-8859-1')
     if cc:
-        message['Cc'] = Header(unicode(cc), 'ISO-8859-1')
+        message['Cc'] = Header(str(cc), 'ISO-8859-1')
 
     return message

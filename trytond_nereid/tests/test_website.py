@@ -4,7 +4,8 @@ import unittest
 import json
 
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, USER, with_transaction
+from trytond.tests.test_tryton import activate_module, USER, with_transaction
+from trytond.pool import Pool
 from nereid.testing import NereidTestCase
 
 
@@ -12,21 +13,21 @@ class TestWebsite(NereidTestCase):
     'Test Website'
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid')
-
-        self.NereidWebsite = POOL.get('nereid.website')
-        self.NereidWebsiteLocale = POOL.get('nereid.website.locale')
-        self.NereidPermission = POOL.get('nereid.permission')
-        self.NereidUser = POOL.get('nereid.user')
-        self.Company = POOL.get('company.company')
-        self.Currency = POOL.get('currency.currency')
-        self.Language = POOL.get('ir.lang')
-        self.Party = POOL.get('party.party')
+        activate_module('nereid')
 
     def setup_defaults(self):
         """
         Setup the defaults
         """
+        self.NereidWebsite = Pool().get('nereid.website')
+        self.NereidWebsiteLocale = Pool().get('nereid.website.locale')
+        self.NereidPermission = Pool().get('nereid.permission')
+        self.NereidUser = Pool().get('nereid.user')
+        self.Company = Pool().get('company.company')
+        self.Currency = Pool().get('currency.currency')
+        self.Language = Pool().get('ir.lang')
+        self.Party = Pool().get('party.party')
+
         usd, = self.Currency.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -40,7 +41,7 @@ class TestWebsite(NereidTestCase):
             'currency': usd,
         }])
 
-        en_us, = self.Language.search([('code', '=', 'en_US')])
+        en_us, = self.Language.search([('code', '=', 'en')])
         currency, = self.Currency.search([('code', '=', 'USD')])
         locale, = self.NereidWebsiteLocale.create([{
             'code': 'en_US',

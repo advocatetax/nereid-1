@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import unittest
 import base64
 import json
 
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, USER, with_transaction
+from trytond.tests.test_tryton import activate_module, USER, with_transaction
 from trytond.transaction import Transaction
 from trytond.config import config
+from trytond.pool import Pool
 from nereid.testing import NereidTestCase
 from nereid import permissions_required
 from werkzeug.exceptions import Forbidden
@@ -23,21 +24,21 @@ class TestAuth(NereidTestCase):
     """
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid')
-
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.nereid_website_locale_obj = POOL.get('nereid.website.locale')
-        self.nereid_permission_obj = POOL.get('nereid.permission')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.currency_obj = POOL.get('currency.currency')
-        self.language_obj = POOL.get('ir.lang')
-        self.party_obj = POOL.get('party.party')
+        activate_module('nereid')
 
     def setup_defaults(self):
         """
         Setup the defaults
         """
+        self.nereid_website_obj = Pool().get('nereid.website')
+        self.nereid_website_locale_obj = Pool().get('nereid.website.locale')
+        self.nereid_permission_obj = Pool().get('nereid.permission')
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.currency_obj = Pool().get('currency.currency')
+        self.language_obj = Pool().get('ir.lang')
+        self.party_obj = Pool().get('party.party')
+
         usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -51,7 +52,7 @@ class TestAuth(NereidTestCase):
             'currency': usd,
         }])
 
-        en_us, = self.language_obj.search([('code', '=', 'en_US')])
+        en_us, = self.language_obj.search([('code', '=', 'en')])
         currency, = self.currency_obj.search([('code', '=', 'USD')])
         locale, = self.nereid_website_locale_obj.create([{
             'code': 'en_US',
@@ -96,7 +97,7 @@ class TestAuth(NereidTestCase):
         """
         Registration must create a new party
         """
-        EmailQueue = POOL.get('email.queue')
+        EmailQueue = Pool().get('email.queue')
 
         self.setup_defaults()
         app = self.get_app()
@@ -144,7 +145,7 @@ class TestAuth(NereidTestCase):
         response = c.post('/registration', data=data)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
-            "A registration already exists with this email" in response.data
+            b"A registration already exists with this email" in response.data
         )
 
     @with_transaction()
@@ -154,7 +155,7 @@ class TestAuth(NereidTestCase):
 
         Same as registration test but with json data
         """
-        EmailQueue = POOL.get('email.queue')
+        EmailQueue = Pool().get('email.queue')
 
         self.setup_defaults()
         app = self.get_app()
@@ -209,7 +210,7 @@ class TestAuth(NereidTestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertTrue(
-            "A registration already exists with this email" in response.data
+            b"A registration already exists with this email" in response.data
         )
 
     @with_transaction()
@@ -217,21 +218,26 @@ class TestAuth(NereidTestCase):
         """
         Assert that matching of password works
         """
-        usd, = self.currency_obj.create([{
+        NereidUser = Pool().get('nereid.user')
+        Company = Pool().get('company.company')
+        Currency = Pool().get('currency.currency')
+        Party = Pool().get('party.party')
+
+        usd, = Currency.create([{
             'name': 'US Dollar',
             'code': 'USD',
             'symbol': '$',
         }])
-        party, = self.party_obj.create([{
+        party, = Party.create([{
             'name': 'Openlabs',
         }])
-        company, = self.company_obj.create([{
+        company, = Company.create([{
             'party': party,
             'currency': usd,
         }])
-        registered_user_party = self.party_obj(name='Registered User')
+        registered_user_party = Party(name='Registered User')
         registered_user_party.save()
-        registered_user, = self.nereid_user_obj.create([{
+        registered_user, = NereidUser.create([{
             'party': registered_user_party,
             'display_name': 'Registered User',
             'email': 'email@example.com',
@@ -316,7 +322,7 @@ class TestAuth(NereidTestCase):
             )
             self.assertEqual(response.status_code, 200)
             self.assertTrue(
-                "Your account has not been activated yet" in response.data
+                b"Your account has not been activated yet" in response.data
             )
 
             # Activate the account
@@ -385,7 +391,7 @@ class TestAuth(NereidTestCase):
                 'confirm': 'password'
             })
             self.assertEqual(response.status_code, 200)
-            self.assertTrue("Passwords must match" in response.data)
+            self.assertTrue(b"Passwords must match" in response.data)
 
             # send wrong password confirm as XHR
             response = c.post('/change-password', data={
@@ -410,7 +416,7 @@ class TestAuth(NereidTestCase):
             })
             self.assertEqual(response.status_code, 200)
 
-            # send correct password confirm but not old password
+            # send correct password confirm and incorrect old password
             response = c.post('/change-password', data={
                 'old_password': 'passw',
                 'password': 'new-password',
@@ -418,7 +424,7 @@ class TestAuth(NereidTestCase):
             })
             self.assertEqual(response.status_code, 200)
             self.assertTrue(
-                "The current password you entered is invalid"
+                b"The current password you entered is invalid"
                 in response.data
             )
 
@@ -595,14 +601,14 @@ class TestAuth(NereidTestCase):
             response = c.post('/reset-account', data={})
             self.assertEqual(response.status_code, 200)
             self.assertTrue(
-                'Invalid email address' in response.data
+                b'Invalid email address' in response.data
             )
 
             # Bad request because there is empty email
             response = c.post('/reset-account', data={'email': ''})
             self.assertEqual(response.status_code, 200)
             self.assertTrue(
-                'Invalid email address' in response.data
+                b'Invalid email address' in response.data
             )
 
         data = {
@@ -620,7 +626,7 @@ class TestAuth(NereidTestCase):
             response = c.post('/reset-account', data={'email': ''})
             self.assertEqual(response.status_code, 200)
             self.assertTrue(
-                'Invalid email address' in response.data
+                b'Invalid email address' in response.data
             )
 
     @with_transaction()
@@ -699,7 +705,7 @@ class TestAuth(NereidTestCase):
         with app.test_client() as c:
             response = c.get('/')
             self.assertTrue(
-                'http://www.gravatar.com/avatar/' in response.data
+                b'http://www.gravatar.com/avatar/' in response.data
             )
 
     @with_transaction()
@@ -730,7 +736,7 @@ class TestAuth(NereidTestCase):
                 data={'email': data['email'], 'password': data['password']}
             )
             response = c.get('/me')
-            self.assertEqual(response.data, data['display_name'])
+            self.assertEqual(response.data, data['display_name'].encode())
 
             # Change the display name of the user
             response = c.post(
@@ -741,7 +747,7 @@ class TestAuth(NereidTestCase):
                 }
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, 'Regd User')
+            self.assertEqual(response.data, b'Regd User')
 
     @with_transaction()
     def test_0100_has_permission(self):
@@ -840,7 +846,7 @@ class TestAuth(NereidTestCase):
                 data={'email': data['email'], 'password': data['password']}
             )
             response = c.get('/me')
-            self.assertEqual(response.data, data['display_name'])
+            self.assertEqual(response.data, data['display_name'].encode())
 
             # Delete the user
             self.nereid_user_obj.delete([nereid_user])
@@ -887,7 +893,7 @@ class TestAuth(NereidTestCase):
                         'utf-8').strip('\r\n')
                 }
             )
-            self.assertEqual(response.data, data['display_name'])
+            self.assertEqual(response.data, data['display_name'].encode())
 
     @with_transaction()
     def test_205_basic_authentication_with_separator(self):
@@ -920,7 +926,7 @@ class TestAuth(NereidTestCase):
                         'utf-8').strip('\r\n')
                 }
             )
-            self.assertEqual(response.data, data['display_name'])
+            self.assertEqual(response.data, data['display_name'].encode())
 
     @with_transaction()
     def test_207_login_basic_authentication_and_active_field(self):
@@ -1003,20 +1009,22 @@ class TestAuth(NereidTestCase):
             # Send the same request with correct token authentication
             response = c.get(
                 '/me', headers={
-                    'Authorization': 'token ' + nereid_user.get_auth_token()
+                    'Authorization': (
+                        'token ' + nereid_user.get_auth_token().decode()
+                    ).encode()
                 }
             )
-            self.assertEqual(response.data, data['display_name'])
+            self.assertEqual(response.data, data['display_name'].encode())
 
             # Send the same request with correct token authentication
             # but using capital 'T' in 'Token'
             token = nereid_user.get_auth_token()
             response = c.get(
                 '/me', headers={
-                    'Authorization': 'Token ' + token
+                    'Authorization': ('Token ' + token.decode()).encode()
                 }
             )
-            self.assertEqual(response.data, data['display_name'])
+            self.assertEqual(response.data, data['display_name'].encode())
 
         nereid_user.active = False
         nereid_user.save()
@@ -1025,7 +1033,7 @@ class TestAuth(NereidTestCase):
             # Send the same request with correct token authentication
             response = c.get(
                 '/me', headers={
-                    'Authorization': 'token ' + token
+                    'Authorization': ('Token ' + token.decode()).encode()
                 }
             )
             self.assertEqual(response.status_code, 302)
@@ -1179,7 +1187,7 @@ class TestAuth(NereidTestCase):
             response = c.get("/me")
             self.assertEqual(response.status_code, 302)
             self.assertEqual(
-                    urllib.unquote(response.location),
+                    urllib.parse.unquote(response.location),
                     'http://localhost/login?next=/me'
             )
 
@@ -1261,7 +1269,7 @@ class TestAuth(NereidTestCase):
         """
         Registration with case sensitive emails should not be allowed
         """
-        EmailQueue = POOL.get('email.queue')
+        EmailQueue = Pool().get('email.queue')
 
         self.setup_defaults()
         app = self.get_app()
@@ -1307,7 +1315,7 @@ class TestAuth(NereidTestCase):
             response = c.post('/registration', data=data)
             self.assertEqual(response.status_code, 200)
             self.assertTrue(
-                "A registration already exists with this email" in response.data
+                b"A registration already exists with this email" in response.data
             )
 
     @with_transaction()

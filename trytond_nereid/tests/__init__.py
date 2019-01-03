@@ -11,16 +11,16 @@ import unittest
 
 import trytond.tests.test_tryton
 from trytond.tests.test_tryton import ModuleTestCase
-from test_auth import TestAuth
-from test_address import TestAddress
-from test_i18n import TestI18N
-from test_static_file import TestStaticFile
-from test_currency import TestCurrency
-from test_routing import TestRouting
-from test_translation import TestTranslation
-from test_country import TestCountry
-from test_website import TestWebsite
-from test_user import TestUser
+from .test_auth import TestAuth
+from .test_address import TestAddress
+from .test_i18n import TestI18N
+from .test_static_file import TestStaticFile
+from .test_currency import TestCurrency
+from .test_routing import TestRouting
+from .test_translation import TestTranslation
+from .test_country import TestCountry
+from .test_website import TestWebsite
+from .test_user import TestUser
 
 
 class TestNereid(ModuleTestCase):

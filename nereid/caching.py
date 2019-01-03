@@ -118,8 +118,8 @@ class Cache(object):
                     return function(*args, **kwargs)
 
                 kwargs_origin = kwargs.copy()
-                kwargs.update(dict(zip(arg_names, args)))
-                kwargs = kwargs.items()
+                kwargs.update(dict(list(zip(arg_names, args))))
+                kwargs = list(kwargs.items())
                 kwargs.sort()
 
                 hash = md5()
@@ -157,9 +157,9 @@ class Cache(object):
                     return function(*args, **kwargs)
 
                 kwargs_origin = kwargs.copy()
-                kwargs.update(dict(zip(arg_names, args)))
+                kwargs.update(dict(list(zip(arg_names, args))))
                 kwargs.pop('self')
-                kwargs = kwargs.items()
+                kwargs = list(kwargs.items())
                 kwargs.sort()
 
                 hash = md5()

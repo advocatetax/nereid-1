@@ -8,12 +8,10 @@
 from trytond.pool import PoolMeta, Pool
 from nereid import context_processor
 
-__metaclass__ = PoolMeta
-
 __all__ = ['ModelData']
 
 
-class ModelData:
+class ModelData(metaclass=PoolMeta):
     __name__ = 'ir.model.data'
 
     @classmethod

@@ -65,7 +65,7 @@ class SitemapIndex(object):
             buffer.write(
                 'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
             )
-            for page in xrange(1, self.page_count + 1):
+            for page in range(1, self.page_count + 1):
                 loc = '<sitemap><loc>%s</loc></sitemap>\n'
                 method = '%s.sitemap' % self.model.__name__
                 buffer.write(loc % url_for(method, page=page, _external=True))
@@ -231,7 +231,7 @@ class SitemapSection(object):
                 '\n'
             )
             for line in self:
-                buffer.write(etree.tostring(line) + u'\n')
+                buffer.write(etree.tostring(line) + '\n')
             buffer.write('</urlset>')
             return send_file(buffer.name, cache_timeout=self.cache_timeout)
 

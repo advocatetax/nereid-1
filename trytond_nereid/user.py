@@ -2,7 +2,7 @@
 # this repository contains the full copyright notices and license terms.
 import random
 import string
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import base64
 import warnings
 
@@ -18,6 +18,8 @@ from wtforms import TextField, SelectField, validators, PasswordField
 from flask.ext.login import logout_user, AnonymousUserMixin, login_url, \
     login_user
 from werkzeug import redirect, abort
+from sql.conditionals import Coalesce
+from sql.operators import Concat
 
 from nereid import request, url_for, render_template, login_required, flash, \
     jsonify, route, current_website, current_user
@@ -31,6 +33,7 @@ from trytond.pyson import Eval, Bool, Not
 from trytond.transaction import Transaction
 from trytond.config import config
 from trytond.rpc import RPC
+from trytond import backend
 from itsdangerous import URLSafeSerializer, TimestampSigner, SignatureExpired, \
     BadSignature, TimedJSONWebSignatureSerializer
 from .i18n import _
@@ -87,7 +90,7 @@ class ProfileForm(Form):
     timezone = SelectField(
         'Timezone',
         choices=[(tz, tz) for tz in pytz.common_timezones],
-        coerce=unicode, description="Your timezone"
+        coerce=str, description="Your timezone"
     )
     email = TextField(
         'Email', [validators.DataRequired(), validators.Email()],
@@ -125,13 +128,11 @@ class NereidUser(ModelSQL, ModelView):
     #: The email of the user is also the login name/username of the user
     email = fields.Char("e-Mail", select=1)
 
-    #: The password is the user password + the salt, which is
-    #: then hashed together
-    password = fields.Sha('Password')
-
-    #: The salt which was used to make the hash is separately
-    #: stored. Needed for
-    salt = fields.Char('Salt', size=8)
+    password_hash = fields.Char('Password Hash')
+    password = fields.Function(
+        fields.Char('Password'),
+        getter='get_password', setter='set_password'
+    )
 
     # The company of the website(s) to which the user is affiliated. This
     # allows websites of the same company to share authentication/users. It
@@ -153,6 +154,41 @@ class NereidUser(ModelSQL, ModelView):
 
     email_verified = fields.Boolean("Email Verified")
     active = fields.Boolean('Active')
+
+    @classmethod
+    def __register__(cls, module_name):
+        TableHandler = backend.get('TableHandler')
+        super(NereidUser, cls).__register__(module_name)
+        table = TableHandler(cls, module_name)
+
+        # Remove password and salt feild
+        if table.column_exist('password') and table.column_exist('salt'):
+            cursor = Transaction().connection.cursor()
+
+            sqltable = cls.__table__()
+            password_hash_new = Concat('sha1$', Concat(sqltable.password,
+                Concat('$', Coalesce(sqltable.salt, ''))))
+            cursor.execute(*sqltable.update(
+                columns=[sqltable.password_hash],
+                values=[password_hash_new]))
+            table.drop_column('password')
+            table.drop_column('salt')
+
+    def get_password(self, name):
+        return 'x' * 10
+
+    @classmethod
+    def set_password(cls, users, name, value):
+        ResUser = Pool().get('res.user')
+
+        if value == 'x' * 10:
+            return
+        to_write = []
+        for user in users:
+            to_write.extend([[user], {
+                'password_hash': ResUser.hash_password(value),
+            }])
+        cls.write(*to_write)
 
     @classmethod
     def get_display_name(cls, records, name):
@@ -416,7 +452,7 @@ class NereidUser(ModelSQL, ModelView):
                     'Please contact customer care'
                 )
                 if request.is_xhr or request.is_json:
-                    return jsonify(message=unicode(message)), 400
+                    return jsonify(message=str(message)), 400
                 else:
                     flash(message)
             else:
@@ -444,7 +480,7 @@ class NereidUser(ModelSQL, ModelView):
                     'Registration Complete. Check your email for activation'
                 )
                 if request.is_xhr or request.is_json:
-                    return jsonify(message=unicode(message)), 201
+                    return jsonify(message=str(message)), 201
                 else:
                     flash(message)
                 return redirect(
@@ -453,7 +489,7 @@ class NereidUser(ModelSQL, ModelView):
 
         if registration_form.errors and (request.is_xhr or request.is_json):
             return jsonify({
-                'message': unicode(_('Form has errors')),
+                'message': str(_('Form has errors')),
                 'errors': registration_form.errors,
             }), 400
 
@@ -571,6 +607,8 @@ class NereidUser(ModelSQL, ModelView):
             On changing the password, the user is logged out and the login page
             is thrown at the user
         """
+        ResUser = Pool().get('res.user')
+
         form = ChangePasswordForm()
 
         if request.method == 'POST' and form.validate():
@@ -743,14 +781,9 @@ class NereidUser(ModelSQL, ModelView):
         :param password: The password of the user (string or unicode)
         :return: True or False
         """
-        password += self.salt or ''
-        if isinstance(password, unicode):
-            password = password.encode('utf-8')
-        if hashlib:
-            digest = hashlib.sha1(password).hexdigest()
-        else:
-            digest = sha.new(password).hexdigest()
-        return (digest == self.password)
+        ResUser = Pool().get('res.user')
+
+        return ResUser.check_password(password, self.password_hash)[0]
 
     @classmethod
     def authenticate(cls, email, password):
@@ -822,12 +855,13 @@ class NereidUser(ModelSQL, ModelView):
             header_val = header_val.replace('Basic ', '', 1)
             try:
                 header_val = base64.b64decode(header_val)
-            except TypeError:
+            except TypeError as exp:
                 pass
             else:
-                user = cls.authenticate(*header_val.split(':', 1))
+                user = cls.authenticate(*header_val.decode().split(':', 1))
                 if user and user.is_active:
                     return user
+            return None
 
         # TODO: Digest authentication
 
@@ -858,7 +892,7 @@ class NereidUser(ModelSQL, ModelView):
             return None     # invalid token
 
         user = cls(data['id'])
-        if user.password != data['password']:
+        if user.password_hash != data['password']:
             # The password has been changed by the user. So the token
             # should also be invalid.
             return None
@@ -890,7 +924,9 @@ class NereidUser(ModelSQL, ModelView):
             )
             self = self.__class__(self.id)
         try:
-            return serializer.dumps({'id': self.id, 'password': self.password})
+            return serializer.dumps({
+                'id': self.id, 'password': self.password_hash
+            })
         finally:
             if local_txn is not None:
                 # TODO: Find a better way to close transaction
@@ -930,21 +966,15 @@ class NereidUser(ModelSQL, ModelView):
         return not self.id
 
     def get_id(self):
-        return unicode(self.id)
+        return str(self.id)
 
     @staticmethod
     def _convert_values(values):
         """
-        A helper method which looks if the password is specified in the values.
-        If it is, then the salt is also made and added
+        A helper method which converts all emails to lower case
 
         :param values: A dictionary of field: value pairs
         """
-        if 'password' in values and values['password']:
-            values['salt'] = ''.join(random.sample(
-                string.ascii_letters + string.digits, 8))
-            values['password'] += values['salt']
-
         if 'email' in values and values['email']:
             values['email'] = values['email'].lower()
 
@@ -984,7 +1014,7 @@ class NereidUser(ModelSQL, ModelView):
             url = 'https://secure.gravatar.com/avatar/%s?'
         else:
             url = 'http://www.gravatar.com/avatar/%s?'
-        url = url % hashlib.md5(email.lower()).hexdigest()
+        url = url % hashlib.md5(email.lower().encode('utf-8')).hexdigest()
 
         params = []
         default = kwargs.get('default', None)
@@ -995,7 +1025,7 @@ class NereidUser(ModelSQL, ModelView):
         if size:
             params.append(('s', str(size)))
 
-        return url + urllib.urlencode(params)
+        return url + urllib.parse.urlencode(params)
 
     def get_profile_picture(self, **kwargs):
         """

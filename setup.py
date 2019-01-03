@@ -5,7 +5,7 @@ import os
 import sys
 import time
 import unittest
-import ConfigParser
+import configparser
 from setuptools import setup, Command
 
 
@@ -86,7 +86,7 @@ class RunAudit(Command):
         try:
             import pyflakes.scripts.pyflakes as flakes
         except ImportError:
-            print "Audit requires PyFlakes installed in your system."
+            print("Audit requires PyFlakes installed in your system.")
             sys.exit(-1)
 
         warns = 0
@@ -100,12 +100,12 @@ class RunAudit(Command):
                     if file != '__init__.py' and file.endswith('.py'):
                         warns += flakes.checkPath(os.path.join(root, file))
         if warns > 0:
-            print "Audit finished with total %d warnings." % warns
+            print("Audit finished with total %d warnings." % warns)
         else:
-            print "No problems found in sourcecode."
+            print("No problems found in sourcecode.")
 
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.readfp(open('trytond_nereid/tryton.cfg'))
 info = dict(config.items('tryton'))
 for key in ('depends', 'extras_depend', 'xml'):

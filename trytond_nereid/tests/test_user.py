@@ -10,7 +10,8 @@ import unittest
 
 import trytond.tests.test_tryton
 from nereid.testing import NereidTestCase
-from trytond.tests.test_tryton import POOL, USER, with_transaction
+from trytond.tests.test_tryton import activate_module, USER, with_transaction
+from trytond.pool import Pool
 from trytond.exceptions import UserError
 
 
@@ -20,22 +21,23 @@ class TestUser(NereidTestCase):
     """
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid')
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.nereid_website_locale_obj = POOL.get('nereid.website.locale')
-        self.nereid_permission_obj = POOL.get('nereid.permission')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.currency_obj = POOL.get('currency.currency')
-        self.language_obj = POOL.get('ir.lang')
-        self.party_obj = POOL.get('party.party')
-        self.Country = POOL.get('country.country')
-        self.Subdivision = POOL.get('country.subdivision')
+        activate_module('nereid')
 
     def setup_defaults(self):
         """
         Setup the defaults
         """
+        self.nereid_website_obj = Pool().get('nereid.website')
+        self.nereid_website_locale_obj = Pool().get('nereid.website.locale')
+        self.nereid_permission_obj = Pool().get('nereid.permission')
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.currency_obj = Pool().get('currency.currency')
+        self.language_obj = Pool().get('ir.lang')
+        self.party_obj = Pool().get('party.party')
+        self.Country = Pool().get('country.country')
+        self.Subdivision = Pool().get('country.subdivision')
+
         usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -81,8 +83,8 @@ class TestUser(NereidTestCase):
             'rates': [('create', [{'rate': Decimal('40')}])],
         }])
         self.website_currencies = [c1, c2]
-        self.en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        self.es_es, = self.language_obj.search([('code', '=', 'es_ES')])
+        self.en_us, = self.language_obj.search([('code', '=', 'en')])
+        self.es_es, = self.language_obj.search([('code', '=', 'es')])
         self.usd, = self.currency_obj.search([('code', '=', 'USD')])
         self.eur, = self.currency_obj.search([('code', '=', 'EUR')])
         locale_en_us, locale_es_es = self.nereid_website_locale_obj.create([{

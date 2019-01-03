@@ -11,8 +11,9 @@ import trytond.tests.test_tryton
 from trytond.transaction import Transaction
 from trytond.cache import Cache
 from trytond.backend.sqlite.database import Database as SQLiteDatabase  # noqa
-from trytond.tests.test_tryton import POOL, USER, DB_NAME, CONTEXT, \
-    with_transaction
+from trytond.pool import Pool
+from trytond.tests.test_tryton import USER, DB_NAME, CONTEXT, \
+    with_transaction, activate_module
 from nereid import render_template, LazyRenderer, render_email
 from nereid.testing import NereidTestCase, NereidTestApp
 from nereid.sessions import Session
@@ -23,17 +24,7 @@ from werkzeug.contrib.sessions import FilesystemSessionStore
 class BaseTestCase(NereidTestCase):
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid')
-
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.nereid_website_locale_obj = POOL.get('nereid.website.locale')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.currency_obj = POOL.get('currency.currency')
-        self.language_obj = POOL.get('ir.lang')
-        self.country_obj = POOL.get('country.country')
-        self.subdivision_obj = POOL.get('country.subdivision')
-        self.party_obj = POOL.get('party.party')
+        activate_module('nereid')
 
     def create_countries(self, count=5):
         """
@@ -62,6 +53,16 @@ class BaseTestCase(NereidTestCase):
         """
         Setup the defaults
         """
+        self.nereid_website_obj = Pool().get('nereid.website')
+        self.nereid_website_locale_obj = Pool().get('nereid.website.locale')
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.currency_obj = Pool().get('currency.currency')
+        self.language_obj = Pool().get('ir.lang')
+        self.country_obj = Pool().get('country.country')
+        self.subdivision_obj = Pool().get('country.subdivision')
+        self.party_obj = Pool().get('party.party')
+
         usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -77,7 +78,7 @@ class BaseTestCase(NereidTestCase):
         self.create_countries()
         self.available_countries = self.country_obj.search([], limit=5)
 
-        en_us, = self.language_obj.search([('code', '=', 'en_US')])
+        en_us, = self.language_obj.search([('code', '=', 'en')])
         currency, = self.currency_obj.search([('code', '=', 'USD')])
         locale, = self.nereid_website_locale_obj.create([{
             'code': 'en_US',
@@ -182,7 +183,7 @@ class TestTemplateLoading(BaseTestCase):
         module now and then try to load a template which is different
         with the test module.
         '''
-        trytond.tests.test_tryton.install_module('nereid_test')
+        activate_module('nereid_test')
 
         with Transaction().start(DB_NAME, USER, CONTEXT) as txn:  # noqa
             # Add nereid_test also to list of modules installed so
@@ -226,21 +227,21 @@ class TestTemplateLoading(BaseTestCase):
         self.setup_defaults()
         app = self.get_app()
 
-        sender = u'Sender <sender@openlabs.co.in>'
+        sender = 'Sender <sender@openlabs.co.in>'
 
         with app.test_request_context('/'):
             email_message = render_email(
-                sender, u'reciever@openlabs.co.in',
-                u'Dummy subject of email', text_template='from-local.html',
-                cc=u'cc@openlabs.co.in'
+                sender, 'reciever@openlabs.co.in',
+                'Dummy subject of email', text_template='from-local.html',
+                cc='cc@openlabs.co.in'
             )
             self.assertEqual(
                 decode_header(email_message['From'])[0],
-                (sender, None)
+                (sender.encode(), 'iso-8859-1')
             )
             self.assertEqual(
                 decode_header(email_message['Subject'])[0],
-                ('Dummy subject of email', None)
+                (b'Dummy subject of email', 'iso-8859-1')
             )
 
     @with_transaction()
@@ -251,15 +252,15 @@ class TestTemplateLoading(BaseTestCase):
         self.setup_defaults()
         app = self.get_app()
 
-        sender = u'Cédric Krier <cedric.krier@b2ck.com>'
+        sender = 'Cédric Krier <cedric.krier@b2ck.com>'
 
         with app.test_request_context('/'):
             email_message = render_email(
                 sender,
-                u'reciever@openlabs.co.in',
-                u'Dummy subject øf email',
+                'reciever@openlabs.co.in',
+                'Dummy subject øf email',
                 text_template='from-local.html',
-                cc=u'cc@openlabs.co.in'
+                cc='cc@openlabs.co.in'
             )
             self.assertEqual(
                 decode_header(email_message['From'])[0],
@@ -268,13 +269,13 @@ class TestTemplateLoading(BaseTestCase):
             self.assertEqual(
                 decode_header(email_message['Subject'])[0],
                 (
-                    u'Dummy subject øf email'.encode('iso-8859-1'),
+                    'Dummy subject øf email'.encode('iso-8859-1'),
                     'iso-8859-1'
                 )
             )
             self.assertEqual(
                 decode_header(email_message['To'])[0],
-                (u'reciever@openlabs.co.in'.encode('UTF-8'), None)
+                (b'reciever@openlabs.co.in', 'iso-8859-1')
             )
 
     @with_transaction()
@@ -285,17 +286,17 @@ class TestTemplateLoading(BaseTestCase):
         self.setup_defaults()
         app = self.get_app()
 
-        sender = u'Sender <sender@openlabs.co.in>'
+        sender = 'Sender <sender@openlabs.co.in>'
 
         with app.test_request_context('/'):
             email_message = render_email(
-                sender, u'reciever@openlabs.co.in',
-                u'Dummy subject of email',
+                sender, 'reciever@openlabs.co.in',
+                'Dummy subject of email',
                 text_template='from-local.html',
             )
             self.assertEqual(
                 decode_header(email_message['Subject'])[0],
-                ('Dummy subject of email', None)
+                (b'Dummy subject of email', 'iso-8859-1')
             )
 
             # Message type should be text/plain
@@ -312,17 +313,17 @@ class TestTemplateLoading(BaseTestCase):
         self.setup_defaults()
         app = self.get_app()
 
-        sender = u'Sender <sender@openlabs.co.in>'
+        sender = 'Sender <sender@openlabs.co.in>'
 
         with app.test_request_context('/'):
             email_message = render_email(
-                sender, u'reciever@openlabs.co.in',
-                u'Dummy subject of email',
+                sender, 'reciever@openlabs.co.in',
+                'Dummy subject of email',
                 html_template='from-local.html',
             )
             self.assertEqual(
                 decode_header(email_message['Subject'])[0],
-                ('Dummy subject of email', None)
+                (b'Dummy subject of email', 'iso-8859-1')
             )
 
             # Message type should be text/html
@@ -339,18 +340,18 @@ class TestTemplateLoading(BaseTestCase):
         self.setup_defaults()
         app = self.get_app()
 
-        sender = u'Sender <sender@openlabs.co.in>'
+        sender = 'Sender <sender@openlabs.co.in>'
 
         with app.test_request_context('/'):
             email_message = render_email(
-                sender, u'reciever@openlabs.co.in',
-                u'Dummy subject of email',
+                sender, 'reciever@openlabs.co.in',
+                'Dummy subject of email',
                 text_template='from-local.html',
                 html_template='from-local.html',
             )
             self.assertEqual(
                 decode_header(email_message['Subject'])[0],
-                ('Dummy subject of email', None)
+                (b'Dummy subject of email', 'iso-8859-1')
             )
 
             # Message type should be multipart/alternative
@@ -381,12 +382,12 @@ class TestTemplateLoading(BaseTestCase):
         self.setup_defaults()
         app = self.get_app()
 
-        sender = u'Sender <sender@openlabs.co.in>'
+        sender = 'Sender <sender@openlabs.co.in>'
 
         with app.test_request_context('/'):
             email_message = render_email(
-                sender, u'reciever@openlabs.co.in',
-                u'Dummy subject of email',
+                sender, 'reciever@openlabs.co.in',
+                'Dummy subject of email',
                 text_template='from-local.html',
                 html_template='from-local.html',
                 attachments={'filename.pdf': 'my glorious PDF content'},
@@ -394,7 +395,7 @@ class TestTemplateLoading(BaseTestCase):
 
             self.assertEqual(
                 decode_header(email_message['Subject'])[0],
-                ('Dummy subject of email', None)
+                (b'Dummy subject of email', 'iso-8859-1')
             )
 
             # Message type should be multipart/alternative
@@ -475,10 +476,10 @@ class TestLazyRendering(BaseTestCase):
             self.assertEqual(lazy_template, "b")
 
             # Make a unicode of the same template
-            unicode_of_response = unicode(lazy_template)
+            unicode_of_response = str(lazy_template)
             self.assertEqual(unicode_of_response, "b")
             self.assertTrue(
-                isinstance(unicode_of_response, unicode)
+                isinstance(unicode_of_response, str)
             )
 
     def test_0020_pickling(self):
@@ -531,7 +532,7 @@ class TestLazyRendering(BaseTestCase):
         '''
         Change registrations headers and check
         '''
-        trytond.tests.test_tryton.install_module('nereid_test')
+        activate_module('nereid_test')
         with Transaction().start(DB_NAME, USER, CONTEXT) as txn:
             self.setup_defaults()
             app = self.get_app()

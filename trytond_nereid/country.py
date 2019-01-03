@@ -8,12 +8,10 @@
 from trytond.pool import PoolMeta, Pool
 from nereid import jsonify, route
 
-__metaclass__ = PoolMeta
-
 __all__ = ['Country', 'Subdivision']
 
 
-class Country:
+class Country(metaclass=PoolMeta):
     "Country"
 
     __name__ = 'country.country'
@@ -51,7 +49,7 @@ class Country:
         )
 
 
-class Subdivision:
+class Subdivision(metaclass=PoolMeta):
     "Subdivision"
 
     __name__ = 'country.subdivision'

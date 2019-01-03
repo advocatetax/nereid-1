@@ -4,6 +4,8 @@ from contextlib import contextmanager
 
 import jinja2
 import unittest
+from trytond import backend
+from trytond.pool import Pool
 from nereid.sessions import Session
 from nereid.contrib.locale import Babel
 from werkzeug.contrib.sessions import FilesystemSessionStore
@@ -32,14 +34,6 @@ class NereidTestApp(Nereid):
         def do_nothing():
             yield
         return do_nothing()
-
-    def load_backend(self):
-        """
-        Just reuse the pool and DB already loaded by the tryton test loader
-        """
-        from trytond.tests.test_tryton import DB, POOL
-        self._database = DB
-        self._pool = POOL
 
     def dispatch_request(self):
         """

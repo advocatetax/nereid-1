@@ -166,7 +166,7 @@ def get_timezone():
             if rv is None:
                 tzinfo = babel.default_timezone
             else:
-                if isinstance(rv, basestring):
+                if isinstance(rv, str):
                     tzinfo = timezone(rv)
                 else:
                     tzinfo = rv

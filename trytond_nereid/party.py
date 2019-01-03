@@ -22,7 +22,6 @@ class AddressForm(Form):
     """
     name = TextField(_('Name'), [validators.DataRequired(), ])
     street = TextField(_('Street'), [validators.DataRequired(), ])
-    streetbis = TextField(_('Street (Bis)'))
     zip = TextField(_('Post Code'), [validators.DataRequired(), ])
     city = TextField(_('City'), [validators.DataRequired(), ])
     country = SelectField(_('Country'), [validators.DataRequired(), ], coerce=int)  # noqa
@@ -39,10 +38,9 @@ class AddressForm(Form):
         ]
 
 
-class Address:
+class Address(metaclass=PoolMeta):
     """Party Address"""
     __name__ = 'party.address'
-    __metaclass__ = PoolMeta
 
     registration_form = RegistrationForm
 
@@ -60,7 +58,6 @@ class Address:
                 request.form,
                 name=address.name,
                 street=address.street,
-                streetbis=address.streetbis,
                 zip=address.zip,
                 city=address.city,
                 country=address.country and address.country.id,
@@ -102,7 +99,6 @@ class Address:
             address, = cls.create([{
                 'name': form.name.data,
                 'street': form.street.data,
-                'streetbis': form.streetbis.data,
                 'zip': form.zip.data,
                 'city': form.city.data,
                 'country': form.country.data,
@@ -172,7 +168,6 @@ class Address:
             cls.write([address], {
                 'name': form.name.data,
                 'street': form.street.data,
-                'streetbis': form.streetbis.data,
                 'zip': form.zip.data,
                 'city': form.city.data,
                 'country': form.country.data,

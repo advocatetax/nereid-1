@@ -44,10 +44,8 @@ NEREID_TRANSLATION_TYPES = [
 
 _nereid_types = [type[0] for type in NEREID_TRANSLATION_TYPES]
 
-__metaclass__ = PoolMeta
 
-
-class Translation:
+class Translation(metaclass=PoolMeta):
     __name__ = 'ir.translation'
 
     comments = fields.Text(
@@ -296,7 +294,7 @@ class Translation:
 
         if pofile:
             pofile.sort()
-            return unicode(pofile).encode('utf-8')
+            return str(pofile).encode('utf-8')
         else:
             return
 
@@ -309,9 +307,9 @@ class Translation:
     @classmethod
     def get_translation_4_nereid(cls, module, ttype, lang, source):
         "Return translation for source"
-        ttype = unicode(ttype)
-        lang = unicode(lang)
-        source = unicode(source)
+        ttype = str(ttype)
+        lang = str(lang)
+        source = str(source)
 
         cache_key = (lang, ttype, source, module)
 
@@ -357,7 +355,7 @@ class Translation:
         return super(Translation, cls).write(translations, values)
 
 
-class TranslationSet:
+class TranslationSet(metaclass=PoolMeta):
     __name__ = "ir.translation.set"
 
     def transition_set_(self):
@@ -391,11 +389,14 @@ class TranslationSet:
 
         IrModule = Pool().get('ir.module')
 
-        packages = list(create_graph(get_module_list())[0])[::-1]
-        installed_module_list = map(
-            lambda module: module.name,
-            IrModule.search([('state', '=', 'installed')])
-        )
+        packages = [
+            package for package in create_graph(get_module_list())
+        ][::-1]
+        installed_module_list = [
+            module.name for module in IrModule.search([(
+                'state', '=', 'activated'
+            )])
+        ]
 
         for package in packages:
             if package.name not in installed_module_list:
@@ -457,7 +458,7 @@ class TranslationSet:
             extensions = '.html,.jinja'
             for template in env.list_templates(extensions=extensions):
                 logger.info('Loading from: %s:%s' % (module, template))
-                file_obj = open(loader.get_source({}, template)[1])
+                file_obj = open(loader.get_source({}, template)[1], 'rb')
                 for message_tuple in babel_extract(
                         file_obj, GETTEXT_FUNCTIONS,
                         ['trans:'], extract_options):
@@ -470,7 +471,7 @@ class TranslationSet:
         """
         extract_options = self._get_nereid_template_extract_options()
         loader = FileSystemLoader(template_dir)
-        file_obj = open(loader.get_source({}, template)[1])
+        file_obj = open(loader.get_source({}, template)[1], 'rb')
         for message_tuple in babel_extract(
                 file_obj, GETTEXT_FUNCTIONS,
                 ['trans:'], extract_options):
@@ -488,7 +489,7 @@ class TranslationSet:
         for module, template, lineno, function, messages, comments in \
                 self._get_nereid_template_messages():
 
-            if isinstance(messages, basestring):
+            if isinstance(messages, str):
                 # messages could be a tuple if the function is ngettext
                 # where the messages for singular and plural are given as
                 # a tuple.
@@ -498,7 +499,7 @@ class TranslationSet:
 
             for message in messages:
                 translations = Translation.search([
-                    ('lang', '=', 'en_US'),
+                    ('lang', '=', 'en'),
                     ('type', '=', 'nereid_template'),
                     ('name', '=', template),
                     ('src', '=', message),
@@ -510,7 +511,7 @@ class TranslationSet:
                 to_create.append({
                     'name': template,
                     'res_id': lineno,
-                    'lang': 'en_US',
+                    'lang': 'en',
                     'src': message,
                     'type': 'nereid_template',
                     'module': module,
@@ -534,7 +535,7 @@ class TranslationSet:
         for (filename, lineno, messages, comments, context) in \
                 extract_from_dir(os.path.dirname(wtforms.__file__)):
 
-            if isinstance(messages, basestring):
+            if isinstance(messages, str):
                 # messages could be a tuple if the function is ngettext
                 # where the messages for singular and plural are given as
                 # a tuple.
@@ -544,7 +545,7 @@ class TranslationSet:
 
             for message in messages:
                 translations = Translation.search([
-                    ('lang', '=', 'en_US'),
+                    ('lang', '=', 'en'),
                     ('type', '=', 'wtforms'),
                     ('name', '=', filename),
                     ('src', '=', message),
@@ -555,7 +556,7 @@ class TranslationSet:
                 to_create.append({
                     'name': filename,
                     'res_id': lineno,
-                    'lang': 'en_US',
+                    'lang': 'en',
                     'src': message,
                     'type': 'wtforms',
                     'module': 'nereid',
@@ -570,7 +571,7 @@ class TranslationSet:
         Get babel messages from a specific file.
         """
         for (lineno, messages, _, _) in extract_from_file('python', template):
-            if isinstance(messages, basestring):
+            if isinstance(messages, str):
                 messages = (messages, )
             for message in messages:
                 yield (template, lineno, message)
@@ -593,7 +594,7 @@ class TranslationSet:
             for (filename, lineno, messages, comments, context) in \
                     extract_from_dir(directory,):
 
-                if isinstance(messages, basestring):
+                if isinstance(messages, str):
                     # messages could be a tuple if the function is ngettext
                     # where the messages for singular and plural are given as
                     # a tuple.
@@ -603,7 +604,7 @@ class TranslationSet:
 
                 for message in messages:
                     translations = Translation.search([
-                        ('lang', '=', 'en_US'),
+                        ('lang', '=', 'en'),
                         ('type', '=', 'nereid'),
                         ('name', '=', filename),
                         ('src', '=', message),
@@ -614,7 +615,7 @@ class TranslationSet:
                     to_create.append({
                         'name': filename,
                         'res_id': lineno,
-                        'lang': 'en_US',
+                        'lang': 'en',
                         'src': message,
                         'type': 'nereid',
                         'module': module,
@@ -624,7 +625,7 @@ class TranslationSet:
             Translation.create(to_create)
 
 
-class TranslationUpdate:
+class TranslationUpdate(metaclass=PoolMeta):
     __name__ = "ir.translation.update"
 
     def do_update(self, action):
@@ -647,7 +648,7 @@ class TranslationUpdate:
         cursor.execute(*(
             translation.select(
                 *columns,
-                where=(translation.lang == 'en_US') &
+                where=(translation.lang == 'en') &
                 translation.type.in_(types)) -
             translation.select(
                 *columns,

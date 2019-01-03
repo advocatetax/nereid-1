@@ -1,7 +1,7 @@
 # This file is part of Tryton & Nereid. The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
 
-from __future__ import with_statement
+
 
 import os  # noqa
 import warnings
@@ -250,9 +250,11 @@ class Nereid(Flask):
         rules = []
         models = Pool._pool[self.database_name]['model']
 
-        for model_name, model in models.iteritems():
+        for model_name, model in models.items():
             for f_name, f in inspect.getmembers(
-                    model, predicate=inspect.ismethod):
+                    model,
+                    predicate=lambda m: inspect.ismethod(m) or inspect.isfunction(m)  # noqa
+                ):
 
                 if not hasattr(f, '_url_rules'):
                     continue
@@ -285,13 +287,13 @@ class Nereid(Flask):
         context_processors = {}
         models = Pool._pool[self.database_name]['model']
 
-        for model_name, model in models.iteritems():
+        for model_name, model in models.items():
             for f_name, f in inspect.getmembers(
                     model, predicate=inspect.ismethod):
 
                 if hasattr(f, '_context_processor'):
                     ctx_proc_as_func = getattr(Pool().get(model_name), f_name)
-                    context_processors[ctx_proc_as_func.func_name] = \
+                    context_processors[ctx_proc_as_func.__name__] = \
                         ctx_proc_as_func
 
         def get_ctx():
@@ -311,13 +313,13 @@ class Nereid(Flask):
         models = Pool._pool[self.database_name]['model']
         filters = []
 
-        for model_name, model in models.iteritems():
+        for model_name, model in models.items():
             for f_name, f in inspect.getmembers(
                     model, predicate=inspect.ismethod):
 
                 if hasattr(f, '_template_filter'):
                     filter = getattr(Pool().get(model_name), f_name)
-                    filters.append((filter.func_name, filter))
+                    filters.append((filter.__name__, filter))
 
         return filters
 
@@ -474,32 +476,35 @@ class Nereid(Flask):
             # otherwise dispatch to the handler for that endpoint
             if req.url_rule.endpoint in self.view_functions:
                 meth = self.view_functions[req.url_rule.endpoint]
-            else:
-                model, method = req.url_rule.endpoint.rsplit('.', 1)
-                meth = getattr(Pool().get(model), method)
-
-            if not hasattr(meth, 'im_self') or meth.im_self:
-                # static or class method
                 result = meth(**req.view_args)
             else:
-                # instance method, extract active_id from the url
-                # arguments and pass the model instance as first argument
-                model = Pool().get(req.url_rule.endpoint.rsplit('.', 1)[0])
-                i = model(active_id)
-                try:
-                    i.rec_name
-                except UserError:
-                    # The record may not exist anymore which results in
-                    # a read error
-                    current_app.logger.debug(
-                        "Record %s doesn't exist anymore." % i
-                    )
-                    abort(404)
-                result = meth(i, **req.view_args)
+                _model, method = req.url_rule.endpoint.rsplit('.', 1)
+                model = Pool().get(_model)
+                meth = getattr(model, method)
+
+                if hasattr(meth, '__self__') or isinstance(
+                    inspect.getattr_static(model, method), staticmethod
+                ):
+                    # static or class method
+                    result = meth(**req.view_args)
+                else:
+                    # instance method, extract active_id from the url
+                    # arguments and pass the model instance as first argument
+                    i = model(active_id)
+                    try:
+                        i.rec_name
+                    except UserError:
+                        # The record may not exist anymore which results in
+                        # a read error
+                        current_app.logger.debug(
+                            "Record %s doesn't exist anymore." % i
+                        )
+                        abort(404)
+                    result = meth(i, **req.view_args)
 
             if isinstance(result, LazyRenderer):
                 result = (
-                    unicode(result), result.status, result.headers
+                    str(result), result.status, result.headers
                 )
 
             return result

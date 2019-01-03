@@ -176,7 +176,7 @@ def send_file(filename_or_fp, mimetype=None, as_attachment=False,
     :param cache_timeout: the timeout in seconds for the headers.
     """
     mtime = None
-    if isinstance(filename_or_fp, basestring):
+    if isinstance(filename_or_fp, str):
         filename = filename_or_fp
         file = None
     else:
@@ -187,7 +187,7 @@ def send_file(filename_or_fp, mimetype=None, as_attachment=False,
         # XXX: this behaviour is now deprecated because it was unreliable.
         # removed in Flask 1.0
         if not attachment_filename and not mimetype and \
-                isinstance(filename, basestring):
+                isinstance(filename, str):
             warn(
                 DeprecationWarning(
                     'The filename support for file objects passed to '
@@ -259,7 +259,7 @@ def send_file(filename_or_fp, mimetype=None, as_attachment=False,
         rv.set_etag('nereid-%s-%s-%s' % (
             os.path.getmtime(filename),
             os.path.getsize(filename),
-            adler32(filename) & 0xffffffff
+            adler32(filename.encode()) & 0xffffffff
         ))
         if conditional:
             rv = rv.make_conditional(request)
@@ -286,10 +286,10 @@ def slugify(value):
     >>> slugify(u'Sharoon Thomås')
     u'sharoon-thomas'
     """
-    if not isinstance(value, unicode):
-        value = unicode(value, errors='ignore')
+    if not isinstance(value, str):
+        value = str(value, errors='ignore')
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
-    value = unicode(_SLUGIFY_STRIP_RE.sub('', value).strip().lower())
+    value = str(_SLUGIFY_STRIP_RE.sub('', value.decode()).strip().lower())
     return _SLUGIFY_HYPHENATE_RE.sub('-', value)
 
 
@@ -427,7 +427,7 @@ def flash(message, category='message'):
                      kind of string can be used as category.
     """
     if is_lazy_string(message):
-        message = unicode(message)
+        message = str(message)
     return _flash(message, category)
 
 
@@ -494,7 +494,7 @@ def context_processor(name=None):
     def decorator(f):
         f._context_processor = True
         if name is not None:
-            f.func_name = name
+            f.__name__ = name
         return f
     return decorator
 
@@ -535,6 +535,6 @@ def template_filter(name=None):
     def decorator(f):
         f._template_filter = True
         if name is not None:
-            f.func_name = name
+            f.__name__ = name
         return f
     return decorator

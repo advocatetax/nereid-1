@@ -162,7 +162,7 @@ class WebSite(ModelSQL, ModelView):
         """
         Test method.
         """
-        return u'Request: %s\nArguments: %s\nEnviron: %s\n' \
+        return 'Request: %s\nArguments: %s\nEnviron: %s\n' \
             % (request, arguments, request.environ)
 
     @classmethod
@@ -248,7 +248,7 @@ class WebSite(ModelSQL, ModelView):
         """
         return jsonify({
             'user': current_user.serialize(),
-            'token': current_user.get_auth_token(),
+            'token': current_user.get_auth_token().decode(),
         })
 
     @staticmethod
@@ -300,7 +300,7 @@ class WebSite(ModelSQL, ModelView):
         This method could be inherited and components could be added
         """
         rv = {
-            'messages': map(unicode, get_flashed_messages()),
+            'messages': list(map(str, get_flashed_messages())),
         }
         if current_user.is_anonymous:
             rv.update({
@@ -384,7 +384,7 @@ class WebSite(ModelSQL, ModelView):
             url_map.add(Submount('/<locale>', url_rules))
         else:
             # Create a new map with the given URLs
-            map(url_map.add, url_rules)
+            list(map(url_map.add, url_rules))
 
         # Add the rules from the application's url map filled through the
         # route decorator or otherwise

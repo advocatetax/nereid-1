@@ -24,8 +24,8 @@ class Config(ConfigBase):
         d = imp.new_module('config')
         d.__file__ = filename
         try:
-            execfile(filename, d.__dict__)
-        except IOError, e:
+            exec(compile(open(filename).read(), filename, 'exec'), d.__dict__)
+        except IOError as e:
             e.strerror = 'Unable to load configuration file (%s)' % e.strerror
             raise
         self.from_object(d)

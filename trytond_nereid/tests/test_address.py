@@ -6,8 +6,9 @@ import unittest
 import pycountry
 from mock import patch
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, USER, with_transaction
+from trytond.tests.test_tryton import activate_module, USER, with_transaction
 from trytond.config import config
+from trytond.pool import Pool
 from nereid.testing import NereidTestCase
 
 config.set('email', 'from', 'from@xyz.com')
@@ -17,19 +18,7 @@ class TestAddress(NereidTestCase):
     'Test Address'
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid')
-
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.nereid_website_locale_obj = POOL.get('nereid.website.locale')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.currency_obj = POOL.get('currency.currency')
-        self.language_obj = POOL.get('ir.lang')
-        self.country_obj = POOL.get('country.country')
-        self.subdivision_obj = POOL.get('country.subdivision')
-        self.party_obj = POOL.get('party.party')
-        self.address_obj = POOL.get('party.address')
-        self.contact_mech_obj = POOL.get('party.contact_mechanism')
+        activate_module('nereid')
 
         self.templates = {
             'home.jinja':
@@ -87,6 +76,18 @@ class TestAddress(NereidTestCase):
         """
         Setup the defaults
         """
+        self.nereid_website_obj = Pool().get('nereid.website')
+        self.nereid_website_locale_obj = Pool().get('nereid.website.locale')
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.currency_obj = Pool().get('currency.currency')
+        self.language_obj = Pool().get('ir.lang')
+        self.country_obj = Pool().get('country.country')
+        self.subdivision_obj = Pool().get('country.subdivision')
+        self.party_obj = Pool().get('party.party')
+        self.address_obj = Pool().get('party.address')
+        self.contact_mech_obj = Pool().get('party.contact_mechanism')
+
         usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -113,7 +114,7 @@ class TestAddress(NereidTestCase):
         self.create_countries()
         self.available_countries = self.country_obj.search([], limit=5)
 
-        en_us, = self.language_obj.search([('code', '=', 'en_US')])
+        en_us, = self.language_obj.search([('code', '=', 'en')])
         currency, = self.currency_obj.search([('code', '=', 'USD')])
         locale, = self.nereid_website_locale_obj.create([{
             'code': 'en_US',
@@ -150,7 +151,6 @@ class TestAddress(NereidTestCase):
         address_data = {
             'name': 'Name',
             'street': 'Street',
-            'streetbis': 'StreetBis',
             'zip': 'zip',
             'city': 'City',
             'email': 'email@example.com',
@@ -186,7 +186,6 @@ class TestAddress(NereidTestCase):
             address, = registered_user.party.addresses
             self.assertEqual(address.name, address_data['name'])
             self.assertEqual(address.street, address_data['street'])
-            self.assertEqual(address.streetbis, address_data['streetbis'])
             self.assertEqual(address.zip, address_data['zip'])
             self.assertEqual(address.city, address_data['city'])
             self.assertEqual(address.party.email, address_data['email'])
@@ -208,7 +207,6 @@ class TestAddress(NereidTestCase):
         address_data = {
             'name': 'Name',
             'street': 'Street',
-            'streetbis': 'StreetBis',
             'zip': 'zip',
             'city': 'City',
             'email': 'email@example.com',
@@ -237,7 +235,9 @@ class TestAddress(NereidTestCase):
             response = c.get(
                 '/en_US/edit-address/%d' % existing_address.id
             )
-            self.assertTrue('ID:%s' % existing_address.id in response.data)
+            self.assertTrue(
+                ('ID:%s' % existing_address.id).encode() in response.data
+            )
 
             # POST to the existing address must updatethe existing address
             response = c.post(
@@ -252,7 +252,6 @@ class TestAddress(NereidTestCase):
             address = self.address_obj(existing_address.id)
             self.assertEqual(address.name, address_data['name'])
             self.assertEqual(address.street, address_data['street'])
-            self.assertEqual(address.streetbis, address_data['streetbis'])
             self.assertEqual(address.zip, address_data['zip'])
             self.assertEqual(address.city, address_data['city'])
             self.assertEqual(address.party.email, address_data['email'])
@@ -305,9 +304,7 @@ class TestAddress(NereidTestCase):
         app = self.get_app()
 
         # Set in :meth:`setup_defaults`
-        countries = filter(
-            lambda c: c.subdivisions, self.available_countries
-        )
+        countries = [c for c in self.available_countries if c.subdivisions]
         country = countries[0]
 
         with app.test_client() as c:
@@ -365,7 +362,7 @@ class TestAddress(NereidTestCase):
         with app.test_client() as c:
             response = c.get('/en_US/')
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, 'English')
+            self.assertEqual(response.data, b'English')
 
     @with_transaction()
     def test_0080_remove_address(self):

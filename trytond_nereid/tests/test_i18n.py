@@ -10,7 +10,8 @@
 import unittest
 
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, USER, with_transaction
+from trytond.tests.test_tryton import activate_module, USER, with_transaction
+from trytond.pool import Pool
 from nereid.testing import NereidTestCase
 from nereid import render_template
 from trytond.transaction import Transaction
@@ -26,21 +27,21 @@ class TestI18N(NereidTestCase):
     """
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid_test')
-
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.nereid_website_locale_obj = POOL.get('nereid.website.locale')
-        self.nereid_permission_obj = POOL.get('nereid.permission')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.currency_obj = POOL.get('currency.currency')
-        self.language_obj = POOL.get('ir.lang')
-        self.party_obj = POOL.get('party.party')
+        activate_module('nereid_test')
 
     def setup_defaults(self):
         """
         Setup the defaults
         """
+        self.nereid_website_obj = Pool().get('nereid.website')
+        self.nereid_website_locale_obj = Pool().get('nereid.website.locale')
+        self.nereid_permission_obj = Pool().get('nereid.permission')
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.currency_obj = Pool().get('currency.currency')
+        self.language_obj = Pool().get('ir.lang')
+        self.party_obj = Pool().get('party.party')
+
         usd, eur = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -57,8 +58,8 @@ class TestI18N(NereidTestCase):
             'party': self.party,
             'currency': usd,
         }])
-        en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        fr_fr, = self.language_obj.search([('code', '=', 'fr_FR')])
+        en_us, = self.language_obj.search([('code', '=', 'en')])
+        fr_fr, = self.language_obj.search([('code', '=', 'fr')])
         usd, = self.currency_obj.search([('code', '=', 'USD')])
         locale, = self.nereid_website_locale_obj.create([{
             'code': 'en_US',
@@ -82,7 +83,7 @@ class TestI18N(NereidTestCase):
         """
         Sets the translations
         """
-        TranslationSet = POOL.get('ir.translation.set', type='wizard')
+        TranslationSet = Pool().get('ir.translation.set', type='wizard')
 
         session_id, _, _ = TranslationSet.create()
         set_wizard = TranslationSet(session_id)
@@ -92,8 +93,8 @@ class TestI18N(NereidTestCase):
         """
         Update the translations for the language
         """
-        TranslationUpdate = POOL.get('ir.translation.update', type='wizard')
-        IRLanguage = POOL.get('ir.lang')
+        TranslationUpdate = Pool().get('ir.translation.update', type='wizard')
+        IRLanguage = Pool().get('ir.lang')
 
         session_id, _, _ = TranslationUpdate.create()
         update_wizard = TranslationUpdate(session_id)
@@ -122,88 +123,88 @@ class TestI18N(NereidTestCase):
         """
         Test if the translations work in a simple env
         """
-        IRTranslation = POOL.get('ir.translation')
+        IRTranslation = Pool().get('ir.translation')
 
         s = _("en_US")
-        self.assertEqual(s, u'en_US')
+        self.assertEqual(s, 'en_US')
 
         # install translations
         self.set_translations()
-        self.update_translations('fr_FR')
+        self.update_translations('fr')
 
         # without setting a tranlsation looking for it gives en_US
-        with Transaction().set_context(language="fr_FR"):
-            self.assertEqual(s, u'en_US')
+        with Transaction().set_context(language="fr"):
+            self.assertEqual(s, 'en_US')
 
         # write a translation for it
         translation, = IRTranslation.search([
             ('module', '=', 'nereid'),
             ('src', '=', 'en_US'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
-        translation.value = 'fr_FR'
+        translation.value = 'fr'
         translation.save()
 
-        with Transaction().set_context(language="fr_FR"):
-            self.assertEqual(s, u'fr_FR')
+        with Transaction().set_context(language="fr"):
+            self.assertEqual(s, 'fr')
 
     @with_transaction()
     def test_0020_kwargs(self):
         """
         Test if kwargs work
         """
-        IRTranslation = POOL.get('ir.translation')
+        IRTranslation = Pool().get('ir.translation')
 
         s = _("Hi %(name)s", name="Sharoon")
-        self.assertEqual(s, u"Hi Sharoon")
+        self.assertEqual(s, "Hi Sharoon")
 
         # install translations
         self.set_translations()
-        self.update_translations('fr_FR')
+        self.update_translations('fr')
 
         # without setting a tranlsation looking for it gives en_US
-        with Transaction().set_context(language="fr_FR"):
-            self.assertEqual(s, u'Hi Sharoon')
+        with Transaction().set_context(language="fr"):
+            self.assertEqual(s, 'Hi Sharoon')
 
         # write a translation for it
         translation, = IRTranslation.search([
             ('module', '=', 'nereid'),
             ('src', '=', 'Hi %(name)s'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
         translation.value = 'Bonjour %(name)s'
         translation.save()
 
-        with Transaction().set_context(language="fr_FR"):
-            self.assertEqual(s, u'Bonjour Sharoon')
+        with Transaction().set_context(language="fr"):
+            self.assertEqual(s, 'Bonjour Sharoon')
 
     @with_transaction()
     def test_0030_ngettext(self):
         """
         Test if ngettext work
         """
-        IRTranslation = POOL.get('ir.translation')
+        IRTranslation = Pool().get('ir.translation')
 
         singular = ngettext("%(num)d apple", "%(num)d apples", 1)
         plural = ngettext("%(num)d apple", "%(num)d apples", 2)
 
-        self.assertEqual(singular, u"1 apple")
-        self.assertEqual(plural, u"2 apples")
+        self.assertEqual(singular, "1 apple")
+        self.assertEqual(plural, "2 apples")
 
         # install translations
         self.set_translations()
-        self.update_translations('fr_FR')
+        self.update_translations('fr')
 
         # without setting a tranlsation looking for it gives en_US
-        with Transaction().set_context(language="fr_FR"):
-            self.assertEqual(singular, u"1 apple")
-            self.assertEqual(plural, u"2 apples")
+        with Transaction().set_context(language="fr"):
+            self.assertEqual(singular, "1 apple")
+            self.assertEqual(plural, "2 apples")
 
         # write a translation for singular
         translations = IRTranslation.search([
             ('module', '=', 'nereid'),
             ('src', '=', '%(num)d apple'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
         for translation in translations:
             translation.value = '%(num)d pomme'
@@ -213,22 +214,22 @@ class TestI18N(NereidTestCase):
         translations = IRTranslation.search([
             ('module', '=', 'nereid'),
             ('src', '=', '%(num)d apples'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
         for translation in translations:
             translation.value = '%(num)d pommes'
             translation.save()
 
-        with Transaction().set_context(language="fr_FR"):
-            self.assertEqual(singular, u"1 pomme")
-            self.assertEqual(plural, u"2 pommes")
+        with Transaction().set_context(language="fr"):
+            self.assertEqual(singular, "1 pomme")
+            self.assertEqual(plural, "2 pommes")
 
     @with_transaction()
     def test_0110_template(self):
         """
         Test the working of translations in templates
         """
-        IRTranslation = POOL.get('ir.translation')
+        IRTranslation = Pool().get('ir.translation')
 
         self.setup_defaults()
         app = self.get_app()
@@ -256,20 +257,20 @@ class TestI18N(NereidTestCase):
             self.assertTrue('<p>Hello Sharoon!</p>' in rv)
 
         def check_fr_fr(rv):
-            self.assertTrue('There is 1 name in fr_FR object.' in rv)
+            self.assertTrue('There is 1 name in fr object.' in rv)
             self.assertTrue('2 pommes' in rv)
             self.assertTrue('<p>Bonjour Sharoon!</p>' in rv)
 
         with app.test_request_context('/en_US/'):
-            rv = unicode(render_template(
+            rv = str(render_template(
                 'tests/translation-test.html',
                 **template_context
             ))
             check_en_us(rv)
 
-            with Transaction().set_context(language="fr_FR"):
+            with Transaction().set_context(language="fr"):
                 # No translations set yet, so same thing
-                rv = unicode(render_template(
+                rv = str(render_template(
                     'tests/translation-test.html',
                     **template_context
                 ))
@@ -277,14 +278,14 @@ class TestI18N(NereidTestCase):
 
         # install translations
         self.set_translations()
-        self.update_translations('fr_FR')
+        self.update_translations('fr')
 
         # write french translations
         translation, = IRTranslation.search([
             ('module', '=', 'nereid_test'),
             ('type', '=', 'nereid_template'),
             ('src', '=', 'Hello %(username)s!'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
         translation.value = 'Bonjour %(username)s!'
         translation.save()
@@ -293,7 +294,7 @@ class TestI18N(NereidTestCase):
             ('module', '=', 'nereid_test'),
             ('type', '=', 'nereid_template'),
             ('src', '=', '%(num)d apples'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
         translation.value = '%(num)d pommes'
         translation.save()
@@ -302,7 +303,7 @@ class TestI18N(NereidTestCase):
             ('module', '=', 'nereid_test'),
             ('type', '=', 'nereid_template'),
             ('src', '=', 'Hello %(name)s!'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
         translation.value = 'Bonjour %(name)s!'
         translation.save()
@@ -311,14 +312,14 @@ class TestI18N(NereidTestCase):
             ('module', '=', 'nereid'),
             ('name', '=', 'tests/test_i18n.py'),
             ('src', '=', 'name'),
-            ('lang', '=', 'fr_FR')
+            ('lang', '=', 'fr')
         ])
-        translation.value = 'name in fr_FR'
+        translation.value = 'name in fr'
         translation.save()
 
-        with app.test_request_context('/fr_FR/'):
-            with Transaction().set_context(language="fr_FR"):
-                rv = unicode(render_template(
+        with app.test_request_context('/fr/'):
+            with Transaction().set_context(language="fr"):
+                rv = str(render_template(
                     'tests/translation-test.html',
                     **template_context
                 ))

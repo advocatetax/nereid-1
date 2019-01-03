@@ -11,8 +11,9 @@
 """
 import unittest
 
-from test_templates import BaseTestCase
-from trytond.tests.test_tryton import POOL, with_transaction
+from .test_templates import BaseTestCase
+from trytond.tests.test_tryton import with_transaction, DB_NAME
+from trytond.pool import Pool
 
 import flask
 import nereid
@@ -186,7 +187,7 @@ class SignalsTestCase(BaseTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        POOL.init(update=['nereid'])
+        Pool(DB_NAME).init(update=['nereid'])
 
 
 def suite():

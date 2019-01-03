@@ -16,7 +16,7 @@ from nereid.signals import transaction_start
 from nereid.sessions import Session
 from nereid.contrib.locale import Babel
 
-from test_templates import BaseTestCase
+from .test_templates import BaseTestCase
 
 
 class NereidTestApp(Nereid):

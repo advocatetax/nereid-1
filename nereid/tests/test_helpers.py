@@ -5,9 +5,11 @@ import unittest
 import warnings
 
 import jinja2
-from test_templates import BaseTestCase
+from .test_templates import BaseTestCase
 from trytond.pool import PoolMeta, Pool
-from trytond.tests.test_tryton import POOL, with_transaction
+from trytond.tests.test_tryton import (
+    activate_module, with_transaction, DB_NAME
+)
 from nereid import url_for, template_filter
 
 
@@ -66,8 +68,7 @@ class TestURLfor(BaseTestCase):
                 self.assertEqual(len(w), 1)
 
 
-class NereidWebsite:
-    __metaclass__ = PoolMeta
+class NereidWebsite(metaclass=PoolMeta):
     __name__ = 'nereid.website'
 
     @classmethod
@@ -87,13 +88,13 @@ class TestHelperFunctions(BaseTestCase):
             NereidWebsite,
             module='nereid', type_='model'
         )
-        POOL.init(update=['nereid'])
+        Pool(DB_NAME).init(update=['nereid'])
 
     @classmethod
     def tearDownClss(cls):
         mpool = Pool.classes['model'].setdefault('nereid', [])
         mpool.remove(NereidWebsite)
-        POOL.init(update=['nereid'])
+        Pool().init(update=['nereid'])
 
     @with_transaction()
     def test_template_filter(self):
@@ -112,7 +113,7 @@ class TestHelperFunctions(BaseTestCase):
 
         with app.test_client() as c:
             response = c.get('/')
-            self.assertEqual(response.data, 'cba')
+            self.assertEqual(response.data, b'cba')
 
 
 def suite():

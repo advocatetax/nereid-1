@@ -11,7 +11,9 @@
 import unittest
 
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, USER, with_transaction
+from trytond.tests.test_tryton import (
+    activate_module, USER, DB_NAME, with_transaction
+)
 from trytond.pool import PoolMeta, Pool
 from trytond.config import config
 from nereid.testing import NereidTestCase
@@ -21,8 +23,7 @@ config.set('email', 'from', 'from@xyz.com')
 config.set('database', 'path', '/tmp/temp_tryton_data/')
 
 
-class StaticFileServingHomePage:
-    __metaclass__ = PoolMeta
+class StaticFileServingHomePage(metaclass=PoolMeta):
     __name__ = 'nereid.website'
 
     @classmethod
@@ -46,30 +47,16 @@ class TestStaticFile(NereidTestCase):
             StaticFileServingHomePage,
             module='nereid', type_='model'
         )
-        POOL.init(update=['nereid'])
+        Pool(DB_NAME).init(update=['nereid'])
 
     @classmethod
     def tearDownClss(cls):
         mpool = Pool.classes['model'].setdefault('nereid', [])
         mpool.remove(StaticFileServingHomePage)
-        POOL.init(update=['nereid'])
+        Pool().init(update=['nereid'])
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid')
-
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.nereid_website_locale_obj = POOL.get('nereid.website.locale')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.currency_obj = POOL.get('currency.currency')
-        self.language_obj = POOL.get('ir.lang')
-        self.country_obj = POOL.get('country.country')
-        self.subdivision_obj = POOL.get('country.subdivision')
-        self.party_obj = POOL.get('party.party')
-        self.address_obj = POOL.get('party.address')
-        self.contact_mech_obj = POOL.get('party.contact_mechanism')
-        self.static_file_obj = POOL.get('nereid.static.file')
-        self.static_folder_obj = POOL.get('nereid.static.folder')
+        activate_module('nereid')
 
         self.templates = {
             'home.jinja':
@@ -83,6 +70,20 @@ class TestStaticFile(NereidTestCase):
         """
         Setup the defaults
         """
+        self.nereid_website_obj = Pool().get('nereid.website')
+        self.nereid_website_locale_obj = Pool().get('nereid.website.locale')
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.currency_obj = Pool().get('currency.currency')
+        self.language_obj = Pool().get('ir.lang')
+        self.country_obj = Pool().get('country.country')
+        self.subdivision_obj = Pool().get('country.subdivision')
+        self.party_obj = Pool().get('party.party')
+        self.address_obj = Pool().get('party.address')
+        self.contact_mech_obj = Pool().get('party.contact_mechanism')
+        self.static_file_obj = Pool().get('nereid.static.file')
+        self.static_folder_obj = Pool().get('nereid.static.folder')
+
         usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -96,7 +97,7 @@ class TestStaticFile(NereidTestCase):
             'currency': usd,
         }])
 
-        en_us, = self.language_obj.search([('code', '=', 'en_US')])
+        en_us, = self.language_obj.search([('code', '=', 'en')])
         currency, = self.currency_obj.search([('code', '=', 'USD')])
         locale, = self.nereid_website_locale_obj.create([{
             'code': 'en_US',
@@ -134,7 +135,7 @@ class TestStaticFile(NereidTestCase):
         """
         self.setup_defaults()
 
-        file_buffer = buffer('test-content')
+        file_buffer = memoryview(b'test-content')
         static_file = self.create_static_file(file_buffer)
         self.assertEqual(static_file.file_binary, file_buffer)
 
@@ -143,14 +144,14 @@ class TestStaticFile(NereidTestCase):
         with app.test_client() as c:
             rv = c.get('/en_US/static-file/test/test.png')
             self.assertEqual(rv.status_code, 200)
-            self.assertEqual(rv.data, 'test-content')
+            self.assertEqual(rv.data, b'test-content')
             self.assertEqual(rv.headers['Content-Type'], 'image/png')
 
     @with_transaction()
     def test_0020_static_file_url(self):
         self.setup_defaults()
 
-        file_buffer = buffer('test-content')
+        file_buffer = memoryview(b'test-content')
         file = self.create_static_file(file_buffer)
         self.assertFalse(file.url)
 
@@ -158,7 +159,7 @@ class TestStaticFile(NereidTestCase):
         with app.test_client() as c:
             rv = c.get('/en_US/static-file-test')
             self.assertEqual(rv.status_code, 200)
-            self.assertTrue('/en_US/static-file/test/test.png' in rv.data)
+            self.assertTrue(b'/en_US/static-file/test/test.png' in rv.data)
 
 
 def suite():

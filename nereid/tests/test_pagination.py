@@ -4,27 +4,28 @@
 import unittest
 
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, with_transaction
+from trytond.tests.test_tryton import activate_module, with_transaction
 from nereid.contrib.pagination import Pagination, BasePagination, \
     QueryPagination
+from trytond.pool import Pool
 from sql import Table
 
 
 class TestPagination(unittest.TestCase):
 
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid')
-
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.company_obj = POOL.get('company.company')
-        self.party_obj = POOL.get('party.party')
-        self.currency_obj = POOL.get('currency.currency')
-        self.address_obj = POOL.get('party.address')
+        activate_module('nereid')
 
     def setup_defaults(self):
         """
         Setup the defaults
         """
+        self.nereid_user_obj = Pool().get('nereid.user')
+        self.company_obj = Pool().get('company.company')
+        self.party_obj = Pool().get('party.party')
+        self.currency_obj = Pool().get('currency.currency')
+        self.address_obj = Pool().get('party.address')
+
         usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
@@ -51,7 +52,7 @@ class TestPagination(unittest.TestCase):
         self.assertEqual(pagination.begin_count, 0)
         self.assertEqual(pagination.end_count, 0)
 
-        pagination = BasePagination(1, 3, range(1, 10))
+        pagination = BasePagination(1, 3, list(range(1, 10)))
         self.assertEqual(pagination.count, 9)
         self.assertEqual(pagination.pages, 3)
         self.assertEqual(pagination.begin_count, 1)
@@ -66,7 +67,7 @@ class TestPagination(unittest.TestCase):
         self.setup_defaults()
 
         # Create a 100 nereid users
-        for id in xrange(0, 100):
+        for id in range(0, 100):
             self.nereid_user_obj.create([{
                 'party': self.guest_party,
                 'display_name': 'User %s' % id,
@@ -89,7 +90,7 @@ class TestPagination(unittest.TestCase):
         self.setup_defaults()
 
         # Create a 100 nereid users
-        for id in xrange(0, 100):
+        for id in range(0, 100):
             self.nereid_user_obj.create([{
                 'party': self.guest_party,
                 'display_name': 'User %s' % id,
@@ -106,7 +107,7 @@ class TestPagination(unittest.TestCase):
         self.assertEqual(serialized['page'], 1)
         self.assertEqual(len(serialized['items']), 10)
 
-        self.assert_('display_name' in serialized['items'][0])
+        self.assertTrue('display_name' in serialized['items'][0])
 
     @with_transaction()
     def test_0040_model_pagination_serialization(self):
@@ -117,7 +118,7 @@ class TestPagination(unittest.TestCase):
         self.setup_defaults()
 
         # Create a 100 addresses
-        for id in xrange(0, 100):
+        for id in range(0, 100):
             self.address_obj.create([{
                 'party': self.guest_party,
                 'name': 'User %s' % id,
@@ -126,8 +127,8 @@ class TestPagination(unittest.TestCase):
         pagination = Pagination(self.address_obj, [], 1, 10)
         serialized = pagination.serialize()
 
-        self.assert_('id' in serialized['items'][0])
-        self.assert_('rec_name' in serialized['items'][0])
+        self.assertTrue('id' in serialized['items'][0])
+        self.assertTrue('rec_name' in serialized['items'][0])
 
     @with_transaction()
     def test_0050_query_pagination(self):
@@ -137,7 +138,7 @@ class TestPagination(unittest.TestCase):
         self.setup_defaults()
 
         # Create a 100 addresses
-        for id in xrange(0, 100):
+        for id in range(0, 100):
             self.address_obj.create([{
                 'party': self.guest_party,
                 'name': 'User %s' % id,

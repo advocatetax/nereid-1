@@ -350,9 +350,9 @@ class Translation(metaclass=PoolMeta):
         return super(Translation, cls).create(vlist)
 
     @classmethod
-    def write(cls, translations, values):
+    def write(cls, translations, values, *args):
         cls._nereid_translation_cache.clear()
-        return super(Translation, cls).write(translations, values)
+        return super(Translation, cls).write(translations, values, *args)
 
 
 class TranslationSet(metaclass=PoolMeta):

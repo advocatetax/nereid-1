@@ -823,6 +823,19 @@ class NereidUser(ModelSQL, ModelView):
 
         return None
 
+    @staticmethod
+    def attributeErrorIfNoTransaction():
+        """
+        Avoid a bug with raven.contrib.flask.Sentry.get_user_info (6.10.0) that
+        expects an AttributeError when there is no user, and that gets called
+        outside of a Transaction, leading to, otherwise, a
+        'TypeError: argument of type 'NoneType' is not iterable'
+        from transaction.py
+        """
+        if Transaction().connection is None:
+            raise AttributeError(
+                'User loading being called outside a Transaction.')
+
     @classmethod
     def load_user(cls, user_id):
         """
@@ -830,6 +843,7 @@ class NereidUser(ModelSQL, ModelView):
 
         :param user_id: Unicode ID of the user
         """
+        cls.attributeErrorIfNoTransaction()
         try:
             with Transaction().set_context(active_test=False):
                 user, = cls.search([('id', '=', int(user_id))])
@@ -891,6 +905,7 @@ class NereidUser(ModelSQL, ModelView):
         except BadSignature:
             return None     # invalid token
 
+        cls.attributeErrorIfNoTransaction()
         user = cls(data['id'])
         if user.password_hash != data['password']:
             # The password has been changed by the user. So the token

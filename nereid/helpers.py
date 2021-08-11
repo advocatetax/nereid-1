@@ -18,7 +18,10 @@ from trytond.config import config
 from speaklater import is_lazy_string
 from flask.helpers import (_PackageBoundObject, locked_cached_property,  # noqa
         get_flashed_messages, flash as _flash, url_for as flask_url_for)
-from werkzeug import Headers, wrap_file, redirect, abort
+from werkzeug.exceptions import abort
+from werkzeug.utils import redirect
+from werkzeug.wsgi import wrap_file
+from werkzeug.datastructures import Headers
 from werkzeug.exceptions import NotFound
 from flask.ext.login import login_required      # noqa
 

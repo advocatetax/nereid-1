@@ -12,7 +12,8 @@ from flask.config import ConfigAttribute
 from flask.globals import _request_ctx_stack, current_app
 from flask.helpers import locked_cached_property
 from jinja2 import MemcachedBytecodeCache
-from werkzeug import import_string, abort
+from werkzeug.exceptions import abort
+from werkzeug.utils import import_string
 import flask.ext.login
 from flask.ext.login import LoginManager
 from flask.ext.babel import Babel

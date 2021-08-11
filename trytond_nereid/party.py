@@ -3,7 +3,8 @@
 import warnings
 from flask_wtf import Form
 from wtforms import TextField, IntegerField, SelectField, validators
-from werkzeug import redirect, abort
+from werkzeug.utils import redirect
+from werkzeug.exceptions import abort
 from jinja2 import TemplateNotFound
 
 from nereid import request, url_for, render_template, login_required, flash, \

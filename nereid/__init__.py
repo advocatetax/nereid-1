@@ -4,7 +4,8 @@
 # utilities we import from Werkzeug and Jinja2 that are unused
 # in the module but are exported as public interface.
 # Flake8: noqa
-from werkzeug import abort, redirect
+from werkzeug.exceptions import abort
+from werkzeug.utils import redirect
 from jinja2 import Markup, escape
 
 from flask.globals import current_app, g, request, \

@@ -17,7 +17,8 @@ from flask_wtf import Form, RecaptchaField
 from wtforms import TextField, SelectField, validators, PasswordField
 from flask.ext.login import logout_user, AnonymousUserMixin, login_url, \
     login_user
-from werkzeug import redirect, abort
+from werkzeug.utils import redirect
+from werkzeug.exceptions import abort
 from sql.conditionals import Coalesce
 from sql.operators import Concat
 

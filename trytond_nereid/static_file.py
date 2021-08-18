@@ -6,7 +6,7 @@ import mimetypes
 from nereid import route
 from nereid.helpers import send_file, url_for
 from nereid.globals import _request_ctx_stack
-from werkzeug import abort
+from werkzeug.exceptions import abort
 
 from trytond.model import ModelSQL, ModelView, fields, Unique
 from trytond.config import config

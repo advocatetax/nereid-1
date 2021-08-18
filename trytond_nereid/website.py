@@ -3,7 +3,8 @@
 import warnings
 
 import pytz
-from werkzeug import abort, redirect
+from werkzeug.exceptions import abort
+from werkzeug.utils import redirect
 from werkzeug.routing import Map, Submount
 from flask_wtf import Form
 from wtforms import TextField, PasswordField, validators, BooleanField

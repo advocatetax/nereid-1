@@ -13,7 +13,6 @@ from jinja2.ext import Extension
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from email.header import Header
 from email import encoders, charset
 import trytond.tools as tools
 from trytond.transaction import Transaction
@@ -380,12 +379,10 @@ def render_email(
     if isinstance(to, (list, tuple)):
         to = ', '.join(to)
 
-    # We need to use Header objects here instead of just assigning the strings
-    # in order to get our headers properly encoded (with QP).
-    message['Subject'] = Header(str(subject), 'ISO-8859-1')
-    message['From'] = Header(str(from_email), 'ISO-8859-1')
-    message['To'] = Header(str(to), 'ISO-8859-1')
+    message['Subject'] = str(subject)
+    message['From'] = str(from_email)
+    message['To'] = str(to)
     if cc:
-        message['Cc'] = Header(str(cc), 'ISO-8859-1')
+        message['Cc'] = str(cc)
 
     return message

@@ -179,6 +179,18 @@ class NereidUser(ModelSQL, ModelView):
         return 'x' * 10
 
     @classmethod
+    def case_insensitive_find_users_by_email(cls, form_email, company_id):
+        "Returns a list of at most one."
+        lower_email = form_email.lower()
+        return [i for i in
+            cls.search([
+                ('email', 'ilike', lower_email),
+                ('company', '=', company_id),
+            ])
+            if i.email.lower() == lower_email
+        ]
+
+    @classmethod
     def set_password(cls, users, name, value):
         ResUser = Pool().get('res.user')
 
@@ -443,10 +455,9 @@ class NereidUser(ModelSQL, ModelView):
 
         if registration_form.validate_on_submit():
             with Transaction().set_context(active_test=False):
-                existing = cls.search([
-                    ('email', '=', registration_form.email.data.lower()),
-                    ('company', '=', current_website.company.id),
-                ])
+                existing = cls.case_insensitive_find_users_by_email(
+                    registration_form.email.data, current_website.company.id
+                )
             if existing:
                 message = _(
                     'A registration already exists with this email. '
@@ -535,10 +546,9 @@ class NereidUser(ModelSQL, ModelView):
         EmailQueue = Pool().get('email.queue')
 
         try:
-            nereid_user, = cls.search([
-                ('email', '=', email.lower()),
-                ('company', '=', current_website.company.id),
-            ])
+            nereid_user, = cls.case_insensitive_find_users_by_email(
+                email, current_website.company.id
+            )
         except ValueError:
             # This email was not found so, let user know about this
             message = "No user with email %s was found!" % email
@@ -733,14 +743,9 @@ class NereidUser(ModelSQL, ModelView):
         form = ResetAccountForm()
         if form.validate_on_submit():
             try:
-                lower_email = form.email.data.lower()
-                nereid_user, = [i for i in
-                    cls.search([
-                        ('email', 'ilike', form.email.data),
-                        ('company', '=', current_website.company.id),
-                    ])
-                    if i.email.lower() == lower_email
-                ]
+                nereid_user, = cls.case_insensitive_find_users_by_email(
+                    form.email.data, current_website.company.id
+                )
             except ValueError:
                 return cls.build_response(
                     'Invalid email address',
@@ -809,10 +814,9 @@ class NereidUser(ModelSQL, ModelView):
         if not (email and password):
             return None
         with Transaction().set_context(active_test=False):
-            users = cls.search([
-                ('email', '=', email.lower()),
-                ('company', '=', current_website.company.id),
-            ])
+            users = cls.case_insensitive_find_users_by_email(
+                email, current_website.company.id
+            )
 
         if not users:
             current_app.logger.debug("No user with email %s" % email)

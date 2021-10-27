@@ -733,12 +733,14 @@ class NereidUser(ModelSQL, ModelView):
         form = ResetAccountForm()
         if form.validate_on_submit():
             try:
-                nereid_user, = cls.search([
-                    ('email', 'ilike', form.email.data),
-                    ('company', '=', current_website.company.id),
-                ])
-                if nereid_user.email.lower() != form.email.data.lower():
-                    raise ValueError
+                lower_email = form.email.data.lower()
+                nereid_user, = [i for i in
+                    cls.search([
+                        ('email', 'ilike', form.email.data),
+                        ('company', '=', current_website.company.id),
+                    ])
+                    if i.email.lower() == lower_email
+                ]
             except ValueError:
                 return cls.build_response(
                     'Invalid email address',

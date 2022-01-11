@@ -148,7 +148,7 @@ theme used in the documentation.
     Initialized empty Git repository in ~/dev/nereid/.git/
     $ cd nereid
     $ git submodule init
-    Submodule 'docs/_themes' (git://github.com/openlabs/flask-sphinx-themes.git) registered for path 'docs/_themes'
+    Submodule 'docs/_themes' (git+https://github.com/openlabs/flask-sphinx-themes.git) registered for path 'docs/_themes'
     $ git submodule update
     Submodule path 'docs/_themes': checked out 'revision #'
 

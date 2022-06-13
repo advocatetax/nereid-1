@@ -1118,7 +1118,12 @@ class NereidUser(ModelSQL, ModelView):
             )
             flash('Your profile has been updated.')
 
-        if request.is_xhr or request.is_json:
+        try:
+            is_json = request.is_json
+        except AttributeError:
+            is_json = request.accept_mimetypes.accept_json
+
+        if request.is_xhr or is_json:
             return jsonify(current_user.serialize())
 
         return render_template(

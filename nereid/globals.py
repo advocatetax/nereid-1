@@ -30,7 +30,11 @@ def _set_locale():
 
 
 def _get_website():
-    Website = current_app.pool.get('nereid.website')
+    try:
+        Website = current_app.pool.get('nereid.website')
+    except AttributeError:
+        from trytond.pool import Pool
+        Website = Pool().get('nereid.website')
     website_id = getattr(_request_ctx_stack.top, 'website', None)
     if website_id is None:
         website_id = _set_website()
@@ -38,7 +42,11 @@ def _get_website():
 
 
 def _set_website():
-    Website = current_app.pool.get('nereid.website')
+    try:
+        Website = current_app.pool.get('nereid.website')
+    except AttributeError:
+        from trytond.pool import Pool
+        Website = Pool().get('nereid.website')
     website = Website.get_from_host(_request_ctx_stack.top.request.host)
     _request_ctx_stack.top.website = website.id
     return website.id

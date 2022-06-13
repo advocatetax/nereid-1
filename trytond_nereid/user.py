@@ -895,6 +895,14 @@ class NereidUser(ModelSQL, ModelView):
                             .replace('Token ', '', 1)
             return cls.load_user_from_token(token)
 
+    @staticmethod
+    def get_expires_in():
+        try:
+            return current_app.token_validity_duration
+        except AttributeError:  # for non-nereid flask apps
+            return current_app.config['TOKEN_VALIDITY_DURATION']
+
+
     @classmethod
     def load_user_from_token(cls, token):
         """
@@ -904,7 +912,7 @@ class NereidUser(ModelSQL, ModelView):
         """
         serializer = TimedJSONWebSignatureSerializer(
             current_app.secret_key,
-            expires_in=current_app.token_validity_duration
+            expires_in=cls.get_expires_in()
         )
 
         try:
@@ -936,7 +944,7 @@ class NereidUser(ModelSQL, ModelView):
         """
         serializer = TimedJSONWebSignatureSerializer(
             current_app.secret_key,
-            expires_in=current_app.token_validity_duration
+            expires_in=self.get_expires_in()
         )
         local_txn = None
         if Transaction().connection is None:

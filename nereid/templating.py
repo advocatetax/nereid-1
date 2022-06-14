@@ -132,16 +132,27 @@ def render_template(template_name_or_list, **context):
     :param context: the variables that should be available in the
                     context of the template.
     """
-    if current_app.template_prefix_website_name and \
+    try:
+        # In migrating away from Nereid to plain Flask, default this to True
+        template_prefix = current_app.template_prefix_website_name
+    except AttributeError:
+        template_prefix = True
+
+    if template_prefix and \
             isinstance(template_name_or_list, str):
         template_name_or_list = [
             '/'.join([current_website.name, template_name_or_list]),
             template_name_or_list
         ]
+    try:
+        # hack for migration away from Nereid
+        eager = current_app.eater_template_render
+    except AttributeError:
+        eager = False
     return LazyRenderer(
         template_name_or_list,
         context,
-        eager=current_app.eager_template_render
+        eager=eager
     )
 
 

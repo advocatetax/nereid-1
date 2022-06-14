@@ -338,8 +338,16 @@ class NereidUser(ModelSQL, ModelView):
         """
         Returns an email verification link for the user
         """
+        str_app = str(current_app)
+        if str_app == "<Nereid 'nereid'>":
+            # hack during flask migration
+            endpoint = 'nereid.user.verify_email'
+        elif str_app == "<Flask 'app'>":
+            endpoint = 'nereid.verify_email'
+        else:
+            raise Exception("Unexpected stringify of app: %s" % str_app)
         return url_for(
-            'nereid.user.verify_email',
+            endpoint,
             sign=self._get_sign('verification'),
             active_id=self.id,
             **options
@@ -463,7 +471,12 @@ class NereidUser(ModelSQL, ModelView):
                     'A registration already exists with this email. '
                     'Please contact customer care'
                 )
-                if request.is_xhr or request.is_json:
+                try:
+                    # hack for flask migration
+                    is_json = request.is_json
+                except AttributeError:
+                    is_json = request.accept_mimetypes.accept_json
+                if request.is_xhr or is_json:
                     return jsonify(message=str(message)), 400
                 else:
                     flash(message)
@@ -491,7 +504,12 @@ class NereidUser(ModelSQL, ModelView):
                 message = _(
                     'Registration Complete. Check your email for activation'
                 )
-                if request.is_xhr or request.is_json:
+                try:
+                    # hack for flask migration
+                    is_json = request.is_json
+                except AttributeError:
+                    is_json = request.accept_mimetypes.accept_json
+                if request.is_xhr or is_json:
                     return jsonify(message=str(message)), 201
                 else:
                     flash(message)

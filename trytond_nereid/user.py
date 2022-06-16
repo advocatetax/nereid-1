@@ -338,27 +338,32 @@ class NereidUser(ModelSQL, ModelView):
         """
         Returns an email verification link for the user
         """
-        str_app = str(current_app)
-        if str_app == "<Nereid 'nereid'>":
-            # hack during flask migration
-            endpoint = 'nereid.user.verify_email'
-        elif str_app == "<Flask 'app'>":
-            endpoint = 'nereid.verify_email'
-        else:
-            raise Exception("Unexpected stringify of app: %s" % str_app)
         return url_for(
-            endpoint,
+            self.app_is_flask_migrated() and 'nereid.verify_email'
+                or 'nereid.user.verify_email',
             sign=self._get_sign('verification'),
             active_id=self.id,
             **options
         )
+
+    @staticmethod
+    def app_is_flask_migrated():
+        "Hack to test if being called as proxy by Flask app."
+        str_app = str(current_app)
+        if str_app == "<Nereid 'nereid'>":
+            return False
+        elif str_app == "<Flask 'app'>":
+            return True
+        else:
+            raise Exception("Unexpected stringify of app: %s" % str_app)
 
     def get_activation_link(self, **options):
         """
         Returns an activation link for the user
         """
         return url_for(
-            'nereid.user.activate',
+            self.app_is_flask_migrated() and 'nereid.activate'
+                or 'nereid.user.activate',
             sign=self._get_sign('activation'),
             active_id=self.id,
             **options
@@ -369,7 +374,8 @@ class NereidUser(ModelSQL, ModelView):
         Returns a password reset link for the user
         """
         return url_for(
-            'nereid.user.new_password',
+            self.app_is_flask_migrated() and 'nereid.new_password'
+                or 'nereid.user.new_password',
             sign=self._get_sign('reset-password'),
             active_id=self.id,
             **options

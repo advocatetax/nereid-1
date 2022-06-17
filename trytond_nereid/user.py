@@ -390,7 +390,12 @@ class NereidUser(ModelSQL, ModelView):
         response: redirect or render_template method.
         xhr_status_code: Status code to be sent with json response.
         """
-        if request.is_xhr or request.is_json:
+        try:
+            # hack for flask migration
+            is_json = request.is_json
+        except AttributeError:
+            is_json = request.accept_mimetypes.accept_json
+        if request.is_xhr or is_json:
             return jsonify(message=message), xhr_status_code
         flash(_(message))
         return response
@@ -777,10 +782,13 @@ class NereidUser(ModelSQL, ModelView):
                     400
                 )
             nereid_user.send_reset_email()
+
             return cls.build_response(
                 'An email has been sent to your account for resetting'
                 ' your credentials',
-                redirect(url_for('nereid.website.login')), 200
+                redirect(url_for(
+                    cls.app_is_flask_migrated() and
+                    'nereid.login' or 'nereid.website.login')), 200
             )
         elif form.errors:
             if request.is_xhr or request.is_json:

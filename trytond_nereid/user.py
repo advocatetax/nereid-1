@@ -42,6 +42,14 @@ from .i18n import _
 __all__ = ['NereidUser', 'NereidAnonymousUser', 'Permission', 'UserPermission']
 
 
+def is_request_json():
+    "Hack for Flask migration (Nereid requests have `is_json` attribute."
+    try:
+        return request.is_json
+    except AttributeError:
+        return request.accept_mimetypes.accept_json
+
+
 class RegistrationForm(Form):
     "Simple Registration form"
     name = TextField(_('Name'), [validators.DataRequired(), ])
@@ -390,12 +398,7 @@ class NereidUser(ModelSQL, ModelView):
         response: redirect or render_template method.
         xhr_status_code: Status code to be sent with json response.
         """
-        try:
-            # hack for flask migration
-            is_json = request.is_json
-        except AttributeError:
-            is_json = request.accept_mimetypes.accept_json
-        if request.is_xhr or is_json:
+        if request.is_xhr or is_request_json():
             return jsonify(message=message), xhr_status_code
         flash(_(message))
         return response
@@ -482,12 +485,7 @@ class NereidUser(ModelSQL, ModelView):
                     'A registration already exists with this email. '
                     'Please contact customer care'
                 )
-                try:
-                    # hack for flask migration
-                    is_json = request.is_json
-                except AttributeError:
-                    is_json = request.accept_mimetypes.accept_json
-                if request.is_xhr or is_json:
+                if request.is_xhr or is_request_json():
                     return jsonify(message=str(message)), 400
                 else:
                     flash(message)
@@ -515,12 +513,7 @@ class NereidUser(ModelSQL, ModelView):
                 message = _(
                     'Registration Complete. Check your email for activation'
                 )
-                try:
-                    # hack for flask migration
-                    is_json = request.is_json
-                except AttributeError:
-                    is_json = request.accept_mimetypes.accept_json
-                if request.is_xhr or is_json:
+                if request.is_xhr or is_request_json():
                     return jsonify(message=str(message)), 201
                 else:
                     flash(message)
@@ -528,7 +521,7 @@ class NereidUser(ModelSQL, ModelView):
                     request.args.get('next', url_for('nereid.website.home'))
                 )
 
-        if registration_form.errors and (request.is_xhr or request.is_json):
+        if registration_form.errors and (request.is_xhr or is_request_json()):
             return jsonify({
                 'message': str(_('Form has errors')),
                 'errors': registration_form.errors,
@@ -671,7 +664,7 @@ class NereidUser(ModelSQL, ModelView):
                     ), 400
                 )
 
-        if form.errors and (request.is_xhr or request.is_json):
+        if form.errors and (request.is_xhr or is_request_json()):
             return jsonify(errors=form.errors), 400
 
         return render_template(
@@ -716,7 +709,7 @@ class NereidUser(ModelSQL, ModelView):
                     redirect(url_for('nereid.website.login')), 200
                 )
         elif form.errors:
-            if request.is_xhr or request.is_json:
+            if request.is_xhr or is_request_json():
                 return jsonify(error=form.errors), 400
             flash(_('Passwords must match'))
 
@@ -791,7 +784,7 @@ class NereidUser(ModelSQL, ModelView):
                     'nereid.login' or 'nereid.website.login')), 200
             )
         elif form.errors:
-            if request.is_xhr or request.is_json:
+            if request.is_xhr or is_request_json():
                 return jsonify(error=form.errors), 400
             flash(_('Invalid email address.'))
 
@@ -1150,12 +1143,7 @@ class NereidUser(ModelSQL, ModelView):
             )
             flash('Your profile has been updated.')
 
-        try:
-            is_json = request.is_json
-        except AttributeError:
-            is_json = request.accept_mimetypes.accept_json
-
-        if request.is_xhr or is_json:
+        if request.is_xhr or is_request_json():
             return jsonify(current_user.serialize())
 
         return render_template(

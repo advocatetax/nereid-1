@@ -997,7 +997,7 @@ class NereidUser(ModelSQL, ModelView):
         If the request is XHR, then a JSON message with the status code 401
         is sent as response, else a redirect to the login page is returned.
         """
-        if request.is_xhr:
+        if request.is_xhr or is_request_json():
             rv = jsonify(message="Bad credentials")
             rv.status_code = 401
             return rv

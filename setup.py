@@ -126,7 +126,6 @@ install_requires = [
 ]
 
 MODULE2PREFIX = {
-    'email_queue': 'fio',
 }
 
 for dep in info.get('depends', []):
